@@ -3,87 +3,191 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>帳本 App B</title>
+<title>訂單庫存管理系統</title>
+
 <style>
+:root {
+  --green:#32d74b; --red:#ff453a; --card:#1c1c1e;
+  --input:#2c2c2e; --blue:#0a84ff; --gray:#8e8e93;
+}
 body {
-  background:#000;
-  color:#fff;
-  font-family:-apple-system;
-  padding:20px;
+  font-family:-apple-system, BlinkMacSystemFont, sans-serif;
+  background:#000; color:white; margin:0; padding:15px;
+}
+.main-header {
+  display:flex; justify-content:space-between; align-items:center;
+}
+.add-btn {
+  background:var(--green); color:#000;
+  width:36px; height:36px; border-radius:50%;
+  border:none; font-size:24px; font-weight:bold;
+}
+.item-card {
+  background:var(--card); border-radius:16px;
+  padding:15px; margin-bottom:10px; border:1px solid #333;
+}
+#form-overlay {
+  display:none; position:fixed; inset:0;
+  background:#000; z-index:10000;
+  padding:15px; overflow-y:auto;
 }
 .card {
-  background:#111;
-  border:1px solid #333;
-  border-radius:16px;
-  padding:20px;
+  background:var(--card); border-radius:18px;
+  padding:20px; margin-bottom:15px; border:1px solid #333;
 }
-input {
-  width:100%;
-  padding:12px;
-  border-radius:10px;
-  border:1px solid #333;
-  background:#000;
-  color:#fff;
-  margin-bottom:10px;
+.form-input {
+  width:100%; padding:14px; border-radius:12px;
+  border:1px solid #333; background:var(--input);
+  color:white; margin-bottom:10px; font-size:16px;
 }
-button {
-  width:100%;
-  padding:14px;
-  border-radius:12px;
-  border:none;
-  font-weight:bold;
-  background:#32d74b;
-  color:#000;
+.status-grid {
+  display:grid; grid-template-columns:repeat(3,1fr);
+  gap:10px;
+}
+.status-btn {
+  padding:10px; border-radius:10px;
+  background:#2c2c2e; border:1px solid #3a3a3c;
+  color:var(--gray); text-align:center;
+}
+.status-btn.active {
+  background:var(--blue); color:white; border-color:var(--blue);
+}
+.profit-box {
+  border:2px solid var(--green);
+  border-radius:15px; padding:15px;
+}
+.data-line {
+  display:flex; justify-content:space-between;
+  margin-bottom:8px; font-size:14px;
 }
 </style>
 </head>
 
 <body>
 
-<h2>📦 帳本（App B）</h2>
+<div id="main-page">
+  <div class="main-header">
+    <h1>訂單管理</h1>
+    <button class="add-btn" onclick="openForm()">+</button>
+  </div>
+  <div id="item-list"></div>
+</div>
 
-<div class="card">
-  <input id="brand" placeholder="品牌">
-  <input id="name" placeholder="商品名稱">
-  <input id="price" placeholder="售價（HKD）">
-  <input id="rate" placeholder="匯率">
-  <button onclick="save()">儲存商品</button>
+<!-- 表單 -->
+<div id="form-overlay">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+    <span onclick="closeForm()" style="color:#8e8e93;">取消</span>
+    <b>貨品資料</b>
+    <span onclick="saveData()" style="color:var(--green);font-weight:bold;">儲存</span>
+  </div>
+
+  <div class="card">
+    <input id="brandName" class="form-input" placeholder="品牌">
+    <input id="itemName" class="form-input" placeholder="貨品名稱">
+  </div>
+
+  <div class="card">
+    <div style="font-size:13px;color:var(--gray);margin-bottom:10px;">📒 成本明細（由匯率匯入）</div>
+    <div class="profit-box">
+      <div class="data-line"><span>當地貨幣原價</span><span id="d-origin">--</span></div>
+      <div class="data-line"><span>換算港幣成本</span><span id="d-hkd">--</span></div>
+      <div class="data-line"><span>固定成本</span><span id="d-fixed">$ 27.00</span></div>
+      <div class="data-line"><span>💰 單件賣價</span><span id="d-sell">--</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="font-size:13px;color:var(--gray);margin-bottom:10px;">🚩 狀態</div>
+    <div class="status-grid">
+      <div class="status-btn" onclick="setStatus(this)">已截</div>
+      <div class="status-btn" onclick="setStatus(this)">已買</div>
+      <div class="status-btn" onclick="setStatus(this)">已到港</div>
+    </div>
+  </div>
 </div>
 
 <script>
+/* ===== 使用者 ===== */
 const user = JSON.parse(localStorage.getItem("currentUser"));
 if (!user) {
-  document.body.innerHTML = "<h3>請先登入</h3>";
+  document.body.innerHTML = "<h2>請先登入</h2>";
 }
 
-const key = `sharedData_${user.id}`;
-const data = JSON.parse(localStorage.getItem(key)) || {};
+/* ===== 資料 ===== */
+let inventory = JSON.parse(localStorage.getItem("myStocks")) || [];
+let editingIdx = null;
 
-if (data.importDraft) {
-  price.value = data.importDraft.sellPrice;
-  rate.value = data.importDraft.rate;
+/* ===== 渲染列表 ===== */
+function renderList() {
+  const list = document.getElementById("item-list");
+  list.innerHTML = "";
+  inventory.forEach((item, i) => {
+    const div = document.createElement("div");
+    div.className = "item-card";
+    div.innerHTML = `<b>${item.brand}</b><br>${item.name}<br><small>${item.sell}</small>`;
+    div.onclick = () => openForm(i);
+    list.appendChild(div);
+  });
 }
 
-function save() {
+/* ===== 打開表單 ===== */
+function openForm(idx = null) {
+  editingIdx = idx;
+  document.getElementById("form-overlay").style.display = "block";
+  document.getElementById("brandName").value = "";
+  document.getElementById("itemName").value = "";
+
+  loadImportDraft();
+}
+
+/* ===== 接收 App A 匯入 ===== */
+function loadImportDraft() {
+  const key = `sharedData_${user.id}`;
+  const data = JSON.parse(localStorage.getItem(key));
+  if (!data || !data.importDraft) return;
+
+  const d = data.importDraft;
+  document.getElementById("d-origin").innerText =
+    `${d.baseAmount} ${d.baseCurrency}`;
+  document.getElementById("d-hkd").innerText = d.cost;
+  document.getElementById("d-sell").innerText = d.sellPrice;
+}
+
+/* ===== 儲存 ===== */
+function saveData() {
   const item = {
-    brand: brand.value,
-    name: name.value,
-    price: price.value,
-    rate: rate.value,
-    createdAt: Date.now()
+    brand: brandName.value,
+    name: itemName.value,
+    origin: d-origin?.innerText,
+    cost: d-hkd?.innerText,
+    sell: d-sell?.innerText
   };
 
-  const itemsKey = `items_${user.id}`;
-  const items = JSON.parse(localStorage.getItem(itemsKey)) || [];
-  items.push(item);
-  localStorage.setItem(itemsKey, JSON.stringify(items));
+  if (editingIdx !== null) inventory[editingIdx] = item;
+  else inventory.push(item);
+
+  localStorage.setItem("myStocks", JSON.stringify(inventory));
 
   // 清掉草稿
+  const key = `sharedData_${user.id}`;
+  const data = JSON.parse(localStorage.getItem(key)) || {};
   delete data.importDraft;
   localStorage.setItem(key, JSON.stringify(data));
 
-  alert("✅ 已儲存");
+  closeForm();
+  renderList();
 }
+
+/* ===== 其他 ===== */
+function closeForm() {
+  document.getElementById("form-overlay").style.display = "none";
+}
+function setStatus(el) {
+  document.querySelectorAll(".status-btn").forEach(b=>b.classList.remove("active"));
+  el.classList.add("active");
+}
+
+renderList();
 </script>
 
 </body>
