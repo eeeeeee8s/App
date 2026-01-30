@@ -3,13 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>帳本管理</title>
-
+<title>帳本 App B</title>
 <style>
-body { background:#000; color:#fff; font-family:-apple-system; padding:15px }
-input { background:#111; color:#fff; border:1px solid #333; padding:12px; border-radius:10px; width:100%; margin-bottom:10px; }
-button { background:#0a84ff; color:#fff; border:none; padding:14px; border-radius:12px; font-weight:bold; width:100%; }
-.card { background:#111; border:1px solid #333; border-radius:16px; padding:15px; }
+body {
+  background:#000;
+  color:#fff;
+  font-family:-apple-system;
+  padding:20px;
+}
+.card {
+  background:#111;
+  border:1px solid #333;
+  border-radius:16px;
+  padding:20px;
+}
+input {
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:1px solid #333;
+  background:#000;
+  color:#fff;
+  margin-bottom:10px;
+}
+button {
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border:none;
+  font-weight:bold;
+  background:#32d74b;
+  color:#000;
+}
 </style>
 </head>
 
@@ -20,41 +45,44 @@ button { background:#0a84ff; color:#fff; border:none; padding:14px; border-radiu
 <div class="card">
   <input id="brand" placeholder="品牌">
   <input id="name" placeholder="商品名稱">
-  <input id="price" placeholder="售價">
+  <input id="price" placeholder="售價（HKD）">
   <input id="rate" placeholder="匯率">
-  <button onclick="saveItem()">💾 儲存商品</button>
+  <button onclick="save()">儲存商品</button>
 </div>
 
 <script>
 const user = JSON.parse(localStorage.getItem("currentUser"));
-if(!user){ alert("未登入"); }
-
-const sharedKey = `sharedData_${user.id}`;
-const shared = JSON.parse(localStorage.getItem(sharedKey)) || {};
-
-if(shared.importDraft){
-  document.getElementById("price").value = shared.importDraft.result;
-  document.getElementById("rate").value = shared.importDraft.rate;
+if (!user) {
+  document.body.innerHTML = "<h3>請先登入</h3>";
 }
 
-function saveItem(){
+const key = `sharedData_${user.id}`;
+const data = JSON.parse(localStorage.getItem(key)) || {};
+
+if (data.importDraft) {
+  price.value = data.importDraft.sellPrice;
+  rate.value = data.importDraft.rate;
+}
+
+function save() {
   const item = {
-    brand: document.getElementById("brand").value,
-    name: document.getElementById("name").value,
-    price: document.getElementById("price").value,
-    rate: document.getElementById("rate").value,
+    brand: brand.value,
+    name: name.value,
+    price: price.value,
+    rate: rate.value,
     createdAt: Date.now()
   };
 
-  const items = JSON.parse(localStorage.getItem(`items_${user.id}`)) || [];
+  const itemsKey = `items_${user.id}`;
+  const items = JSON.parse(localStorage.getItem(itemsKey)) || [];
   items.push(item);
-  localStorage.setItem(`items_${user.id}`, JSON.stringify(items));
+  localStorage.setItem(itemsKey, JSON.stringify(items));
 
   // 清掉草稿
-  delete shared.importDraft;
-  localStorage.setItem(sharedKey, JSON.stringify(shared));
+  delete data.importDraft;
+  localStorage.setItem(key, JSON.stringify(data));
 
-  alert("已儲存商品");
+  alert("✅ 已儲存");
 }
 </script>
 
