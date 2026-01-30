@@ -1,250 +1,48 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>代購利潤完整版</title>
-    <style>
-        :root { --mono: 'SF Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; }
-        body { font-family: -apple-system, sans-serif; background-color: #000; color: white; padding: 20px; margin: 0; }
-        .app-container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 12px; }
-        .info-bar { display: flex; justify-content: space-between; font-size: 11px; color: #888; padding: 0 5px; }
-        
-        /* 匯率選單與統一字體 */
-        .selector-grid { display: flex; justify-content: space-between; gap: 6px; }
-        .btn-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .btn-item button { width: 100%; padding: 12px 0; border: 2px solid #333; background: transparent; color: white; border-radius: 10px; font-weight: bold; font-size: 14px; cursor: pointer; }
-        .btn-item button.active { background: #0055ff; border-color: #0055ff; }
-        
-        .rate-labels { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 28px; }
-        .live-label { font-size: 10px; color: #00ff00; font-family: var(--mono); }
-        .sell-label { font-size: 11px; color: #ffea00; font-weight: bold; font-family: var(--mono); }
-        
-        /* 輸入框 */
-        .box { border: 3px solid; border-radius: 20px; padding: 15px; display: flex; align-items: center; justify-content: space-between; }
-        .box-red { border-color: #ff4d4d; }
-        .box-yellow { border-color: #ffea00; }
-        .flag-circle { width: 45px; height: 45px; border-radius: 50%; background: #222; display: flex; align-items: center; justify-content: center; font-size: 26px; border: 1px solid #444; }
-        .code-label { font-size: 11px; color: #888; text-align: center; font-weight: bold; font-family: var(--mono); }
-        .main-input { background: transparent; border: none; color: white; font-size: 35px; text-align: right; width: 65%; outline: none; font-family: var(--mono); }
-        
-        .swap-btn { align-self: center; font-size: 24px; color: #00ff00; cursor: pointer; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>匯率計算</title>
 
-        .extra-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .option-btn { background: #222; border: 1px solid #444; color: white; padding: 12px 2px; border-radius: 12px; text-align: center; font-size: 12px; font-weight: bold; cursor: pointer; }
-        .option-btn.active { border-color: #00ff00; background: #0a220a; color: #00ff00; }
-        .option-btn.cost-active { border-color: #ff4d4d; background: #2a0a0a; color: #ff4d4d; }
-
-        /* 其他支出欄位 */
-        .custom-row { background: #1a1a1a; padding: 12px 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px dashed #444; }
-        .custom-row input { background: #000; border: 1px solid #444; color: #ff4d4d; width: 90px; padding: 8px; border-radius: 8px; text-align: center; font-size: 16px; outline: none; font-family: var(--mono); }
-
-        /* 利潤顯示區 */
-        .profit-card { background: #111; border: 2px solid #00ff00; border-radius: 15px; padding: 15px; }
-        .profit-row { display: flex; justify-content: space-between; font-size: 13px; color: #aaa; margin-bottom: 6px; }
-        .profit-row span:last-child { font-family: var(--mono); }
-        .profit-main { display: flex; justify-content: space-between; align-items: center; font-size: 20px; color: #00ff00; font-weight: bold; margin-top: 10px; border-top: 1px solid #333; padding-top: 10px; }
-        .profit-main span:last-child { font-family: var(--mono); }
-        
-        /* 設定面板 */
-        #settingsPanel { background: #1a1a1a; border-radius: 15px; padding: 15px; margin-top: 10px; border: 1px solid #444; }
-        .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 14px; }
-        .setting-row input { background: #333; border: 1px solid #555; color: #ffea00; width: 60px; padding: 5px; border-radius: 8px; text-align: center; outline: none; font-family: var(--mono); }
-        .save-btn { background: #0055ff; color: white; padding: 12px; border-radius: 10px; text-align: center; font-weight: bold; border: none; width: 100%; margin-top: 10px; cursor: pointer; }
-    </style>
+<style>
+body { background:#000; color:#fff; font-family:-apple-system; padding:15px }
+button { background:#32d74b; color:#000; border:none; padding:14px; border-radius:12px; font-weight:bold; width:100%; margin-top:15px; }
+input { background:#111; color:#fff; border:1px solid #333; padding:12px; border-radius:10px; width:100%; }
+</style>
 </head>
+
 <body>
 
-<div class="app-container">
-    <div class="info-bar">
-        <span>利潤 = (報價 - 總成本)</span>
-        <span id="update-time">--:--</span>
-    </div>
+<h2>💰 匯率計算（App A）</h2>
 
-    <div class="selector-grid">
-        <div class="btn-item">
-            <button id="btn-USD" onclick="changeBase('USD')">USD</button>
-            <div class="rate-labels">
-                <div class="live-label" id="live-USD">--</div>
-                <div class="sell-label" id="sell-USD">--</div>
-            </div>
-        </div>
-        <div class="btn-item">
-            <button id="btn-JPY" onclick="changeBase('JPY')">JPY</button>
-            <div class="rate-labels">
-                <div class="live-label" id="live-JPY">--</div>
-                <div class="sell-label" id="sell-JPY">--</div>
-            </div>
-        </div>
-        <div class="btn-item">
-            <button id="btn-KRW" onclick="changeBase('KRW')">KRW</button>
-            <div class="rate-labels">
-                <div class="live-label" id="live-KRW">--</div>
-                <div class="sell-label" id="sell-KRW">--</div>
-            </div>
-        </div>
-        <div class="btn-item">
-            <button id="btn-TWD" onclick="changeBase('TWD')">TWD</button>
-            <div class="rate-labels">
-                <div class="live-label" id="live-TWD">--</div>
-                <div class="sell-label" id="sell-TWD">--</div>
-            </div>
-        </div>
-        <div class="btn-item">
-            <button id="btn-THB" onclick="changeBase('THB')">THB</button>
-            <div class="rate-labels">
-                <div class="live-label" id="live-THB">--</div>
-                <div class="sell-label" id="sell-THB">--</div>
-            </div>
-        </div>
-    </div>
+<input id="amount" placeholder="輸入金額">
+<input id="rate" placeholder="匯率">
+<input id="result" placeholder="換算結果">
 
-    <div class="box box-red">
-        <div class="flag-section"><div class="flag-circle" id="flag1">🇺🇸</div><div id="code1" class="code-label">USD</div></div>
-        <input type="text" inputmode="decimal" id="input1" class="main-input" placeholder="0" oninput="doConvert()">
-    </div>
-    <div class="swap-btn" onclick="swapCurrencies()">⇅</div>
-    <div class="box box-yellow">
-        <div class="flag-section"><div class="flag-circle" id="flag2">🇭🇰</div><div id="code2" class="code-label">HKD</div></div>
-        <input type="text" inputmode="decimal" id="input2" class="main-input" placeholder="0" oninput="doConvert()">
-    </div>
-
-    <div class="extra-options">
-        <div class="option-btn" id="opt6" onclick="toggleOption('six')">+6% 成本</div>
-        <div class="option-btn" id="opt27" onclick="toggleOption('fixed27')">+$27 成本</div>
-        <div class="option-btn" id="optRound" onclick="toggleOption('round')">結果取整</div>
-        <div class="option-btn" id="optEnd8" onclick="toggleOption('end8')">✨ 尾數歸 8</div>
-    </div>
-
-    <div class="custom-row">
-        <span style="font-size: 13px; color: #ff4d4d; font-weight: bold;">📦 其他支出 (HKD) :</span>
-        <input type="text" inputmode="decimal" id="extra-manual" placeholder="0" oninput="doConvert()">
-    </div>
-
-    <div class="profit-card">
-        <div class="profit-row"><span>實時成本 (進貨價)</span><span id="cost-base-display">$ 0.00</span></div>
-        <div class="profit-row"><span>額外支出 (手續費/運費)</span><span id="cost-extra-display">$ 0.00</span></div>
-        <div class="profit-main"><span>💰 最終淨利 (HKD)</span><span id="profit-display">$ 0.00</span></div>
-    </div>
-
-    <div id="settingsPanel">
-        <div style="font-size: 13px; color: #888; margin-bottom: 10px; font-weight: bold;">⚙️ 個別幣別利潤設定 (%)</div>
-        <div class="setting-row"><span>🇺🇸 USD 利潤</span><input type="text" inputmode="decimal" id="m-USD" value="5.0" oninput="calculateSellRates()"></div>
-        <div class="setting-row"><span>🇯🇵 JPY 利潤</span><input type="text" inputmode="decimal" id="m-JPY" value="5.0" oninput="calculateSellRates()"></div>
-        <div class="setting-row"><span>🇰🇷 KRW 利潤</span><input type="text" inputmode="decimal" id="m-KRW" value="5.0" oninput="calculateSellRates()"></div>
-        <div class="setting-row"><span>🇹🇼 TWD 利潤</span><input type="text" inputmode="decimal" id="m-TWD" value="5.0" oninput="calculateSellRates()"></div>
-        <div class="setting-row"><span>🇹🇭 THB 利潤</span><input type="text" inputmode="decimal" id="m-THB" value="5.0" oninput="calculateSellRates()"></div>
-        <button class="save-btn" onclick="saveSettings()">💾 儲存利潤比例</button>
-    </div>
-</div>
+<button onclick="importToBook()">➕ 匯入帳本</button>
 
 <script>
-    let liveRates = { 'USD': 7.8, 'JPY': 0.052, 'KRW': 0.0056, 'TWD': 0.25, 'THB': 0.22 };
-    let sellRates = {};
-    let margins = { 'USD': 5.0, 'JPY': 5.0, 'KRW': 5.0, 'TWD': 5.0, 'THB': 5.0 };
-    const flags = { 'USD': '🇺🇸', 'JPY': '🇯🇵', 'KRW': '🇰🇷', 'TWD': '🇹🇼', 'THB': '🇹🇭', 'HKD': '🇭🇰' };
-    let currentBase = 'USD', isHkdTop = false, plusSix = false, plus27 = false, isRoundUp = false, isEnd8 = false;
+const user = JSON.parse(localStorage.getItem("currentUser"));
+if(!user){ alert("未登入"); }
 
-    function loadSettings() {
-        const saved = localStorage.getItem('myIndividualMargins');
-        if (saved) { 
-            margins = JSON.parse(saved);
-            for (let code in margins) {
-                const el = document.getElementById('m-' + code);
-                if (el) el.value = margins[code];
-            }
-        }
-    }
+function importToBook(){
+  const draft = {
+    source: "appA",
+    baseAmount: document.getElementById("amount").value,
+    rate: document.getElementById("rate").value,
+    result: document.getElementById("result").value,
+    createdAt: Date.now()
+  };
 
-    function saveSettings() {
-        for (let code in margins) { margins[code] = parseFloat(document.getElementById('m-' + code).value || 0); }
-        localStorage.setItem('myIndividualMargins', JSON.stringify(margins));
-        alert('✅ 設定已儲存！');
-    }
+  localStorage.setItem(
+    `sharedData_${user.id}`,
+    JSON.stringify({ importDraft: draft })
+  );
 
-    async function updateLiveLabels() {
-        try {
-            const res = await fetch('https://open.er-api.com/v6/latest/HKD');
-            const data = await res.json();
-            const r = data.rates;
-            if(r) {
-                liveRates = { 'USD': 1/r.USD, 'JPY': 1/r.JPY, 'KRW': 1/r.KRW, 'TWD': 1/r.TWD, 'THB': 1/r.THB };
-                document.getElementById('live-USD').innerText = liveRates.USD.toFixed(3);
-                document.getElementById('live-JPY').innerText = (liveRates.JPY * 100).toFixed(2);
-                document.getElementById('live-KRW').innerText = (liveRates.KRW * 1000).toFixed(2);
-                document.getElementById('live-TWD').innerText = (1/liveRates.TWD).toFixed(1);
-                document.getElementById('live-THB').innerText = (1/liveRates.THB).toFixed(1);
-                document.getElementById('update-time').innerText = new Date().toLocaleTimeString();
-                calculateSellRates();
-            }
-        } catch(e) {}
-    }
-
-    function calculateSellRates() {
-        for (let code in liveRates) {
-            const m = parseFloat(document.getElementById('m-' + code).value || 0) / 100;
-            sellRates[code] = liveRates[code] * (1 + m);
-            
-            let displayVal;
-            if(code === 'JPY') displayVal = (sellRates[code] * 100).toFixed(2);
-            else if(code === 'KRW') displayVal = (sellRates[code] * 1000).toFixed(2);
-            else if(code === 'TWD' || code === 'THB') displayVal = (1/sellRates[code]).toFixed(1);
-            else displayVal = sellRates[code].toFixed(2);
-            
-            document.getElementById('sell-' + code).innerText = displayVal;
-        }
-        doConvert();
-    }
-
-    function doConvert() {
-        let val1 = parseFloat(document.getElementById('input1').value.replace(/[^0-9.]/g, '')) || 0;
-        let mySellRate = sellRates[currentBase] || 0;
-        let myCostRate = liveRates[currentBase] || 0;
-        let manualExtra = parseFloat(document.getElementById('extra-manual').value) || 0;
-
-        let rawQuote = val1 * mySellRate;
-        let feesHkd = manualExtra;
-        if(plusSix) feesHkd += (val1 * myCostRate * 0.06);
-        if(plus27) feesHkd += 27;
-
-        let finalPrice = rawQuote + feesHkd;
-        if (isEnd8) { 
-            let base = Math.floor(finalPrice / 10) * 10;
-            finalPrice = base + 8;
-            if (finalPrice < rawQuote + feesHkd) finalPrice += 10;
-        } else if (isRoundUp) { finalPrice = Math.ceil(finalPrice); }
-
-        document.getElementById('input2').value = val1 === 0 ? "" : finalPrice.toFixed(finalPrice % 1 === 0 ? 0 : 1);
-
-        let actualCostBase = val1 * myCostRate;
-        document.getElementById('cost-base-display').innerText = '$ ' + actualCostBase.toFixed(2);
-        document.getElementById('cost-extra-display').innerText = '$ ' + feesHkd.toFixed(2);
-        document.getElementById('profit-display').innerText = '$ ' + (finalPrice - (actualCostBase + feesHkd)).toFixed(2);
-    }
-
-    function changeBase(code) {
-        currentBase = code;
-        ['USD', 'JPY', 'KRW', 'TWD', 'THB'].forEach(c => document.getElementById('btn-' + c).classList.toggle('active', c === code));
-        const b1 = isHkdTop ? 'HKD' : currentBase;
-        const b2 = isHkdTop ? currentBase : 'HKD';
-        document.getElementById('flag1').innerText = flags[b1]; document.getElementById('code1').innerText = b1;
-        document.getElementById('flag2').innerText = flags[b2]; document.getElementById('code2').innerText = b2;
-        doConvert();
-    }
-
-    function swapCurrencies() { isHkdTop = !isHkdTop; changeBase(currentBase); }
-    function toggleOption(type) {
-        if(type==='six') { plusSix = !plusSix; document.getElementById('opt6').classList.toggle('cost-active'); }
-        else if(type==='fixed27') { plus27 = !plus27; document.getElementById('opt27').classList.toggle('cost-active'); }
-        else if(type==='round') { isRoundUp = !isRoundUp; document.getElementById('optRound').classList.toggle('active'); }
-        else if(type==='end8') { isEnd8 = !isEnd8; document.getElementById('optEnd8').classList.toggle('active'); }
-        doConvert();
-    }
-
-    loadSettings();
-    updateLiveLabels();
-    changeBase('USD');
-    setInterval(updateLiveLabels, 60000);
+  alert("已匯入帳本，請前往 App B");
+}
 </script>
+
 </body>
 </html>
