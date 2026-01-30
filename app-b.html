@@ -12,15 +12,9 @@ body {
   color: #fff;
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
 }
-
 .container {
   padding: 20px;
 }
-
-h2 {
-  margin-bottom: 16px;
-}
-
 .card {
   background: #111;
   border: 1px solid #333;
@@ -28,7 +22,6 @@ h2 {
   padding: 16px;
   margin-bottom: 16px;
 }
-
 input {
   width: 100%;
   padding: 12px;
@@ -37,9 +30,7 @@ input {
   border: 1px solid #333;
   background: #000;
   color: #fff;
-  box-sizing: border-box;
 }
-
 button {
   width: 100%;
   padding: 14px;
@@ -47,13 +38,9 @@ button {
   border: none;
   font-size: 16px;
 }
+.save { background:#32d74b; color:#000; }
 
-.save-btn {
-  background: #32d74b;
-  color: #000;
-}
-
-.add-btn {
+.add {
   position: fixed;
   right: 20px;
   bottom: 20px;
@@ -64,8 +51,7 @@ button {
   background: #0a84ff;
   color: #fff;
 }
-
-.list-item {
+.item {
   border-bottom: 1px solid #333;
   padding: 10px 0;
 }
@@ -73,39 +59,33 @@ button {
 </head>
 
 <body>
-
 <div class="container">
   <h2>📦 帳本（App B）</h2>
 
-  <!-- 表單 -->
   <div class="card">
     <input id="brand" placeholder="品牌">
     <input id="name" placeholder="商品名稱">
-    <input id="price" placeholder="售價 (HKD)" type="number">
+    <input id="price" placeholder="售價 (HKD)">
     <input id="rate" placeholder="匯率">
-
-    <button class="save-btn" onclick="saveItem()">儲存商品</button>
+    <button class="save" onclick="save()">儲存商品</button>
   </div>
 
-  <!-- 商品列表 -->
   <div class="card">
     <h3>商品列表</h3>
     <div id="list"></div>
   </div>
 </div>
 
-<!-- + 按鈕 -->
-<button class="add-btn" onclick="clearForm()">＋</button>
+<button class="add" onclick="clearForm()">＋</button>
 
 <script>
-const STORAGE_KEY = "appB_items";
+const KEY = "APP_B_ITEMS";
 
 function getItems() {
-  return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  return JSON.parse(localStorage.getItem(KEY) || "[]");
 }
-
-function saveItems(items) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+function setItems(items) {
+  localStorage.setItem(KEY, JSON.stringify(items));
 }
 
 function render() {
@@ -118,31 +98,27 @@ function render() {
     return;
   }
 
-  items.forEach(item => {
+  items.forEach(i => {
     const div = document.createElement("div");
-    div.className = "list-item";
+    div.className = "item";
     div.innerHTML = `
-      <b>${item.brand}</b><br>
-      ${item.name}<br>
-      $${item.price} HKD｜匯率 ${item.rate}
+      <b>${i.brand || "（未命名）"}</b><br>
+      ${i.name || ""}<br>
+      $${i.price}｜匯率 ${i.rate}
     `;
     list.appendChild(div);
   });
 }
 
-function saveItem() {
-  const item = {
+function save() {
+  const items = getItems();
+  items.push({
     brand: brand.value,
     name: name.value,
     price: price.value,
     rate: rate.value
-  };
-
-  const items = getItems();
-  items.push(item);
-  saveItems(items);
-
-  alert("已儲存");
+  });
+  setItems(items);
   render();
   clearForm();
 }
@@ -154,19 +130,17 @@ function clearForm() {
   rate.value = "";
 }
 
-/* 🔁 接收 App A 匯入 */
+/* 🔁 即時接收 App A */
 window.addEventListener("message", e => {
   if (e.data?.type === "IMPORT_FROM_A") {
     const items = getItems();
     items.push(e.data.payload);
-    saveItems(items);
+    setItems(items);
     render();
-    alert("已從匯率匯入");
   }
 });
 
 render();
 </script>
-
 </body>
 </html>
