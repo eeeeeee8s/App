@@ -1,1 +1,94 @@
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /><meta http-equiv="Content-Style-Type" content="text/css" /><meta name="generator" content="Aspose.Words for .NET 17.1.0.0" /><title>登入｜代購全能管理系統</title></head><body style="background:#000000"><div><div style="margin-top:11.05pt; margin-right:22.5pt; margin-left:22.5pt; border:0.75pt solid #333333; clear:both"><h1 style="margin-top:0pt; margin-bottom:0pt; text-align:center; padding-bottom:7.5pt; font-size:16.5pt; background-color:#111111"><span style="font-family:PMingLiU; color:#ffffff">代購全能管理系統</span></h1><p style="margin-top:0pt; margin-bottom:0pt; text-align:center; padding-bottom:18.75pt; font-size:10.5pt; background-color:#111111"><span style="font-family:PMingLiU; color:#aaaaaa">請使用</span><span style="font-family:'Segoe UI'; color:#aaaaaa"> Google </span><span style="font-family:PMingLiU; color:#aaaaaa">帳號登入</span></p><p style="margin-top:0pt; margin-bottom:0pt; text-align:center; font-size:12pt; background-color:#111111"><span style="font-family:'Segoe UI'; color:#ffffff">&#xa0;</span></p></div></div></body></html>
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>登入｜代購全能管理系統</title>
+
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      background: #000;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 16px;
+      padding: 30px;
+      width: 90%;
+      max-width: 360px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 22px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      font-size: 14px;
+      color: #aaa;
+      margin-bottom: 25px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h1>代購全能管理系統</h1>
+    <p>請使用 Google 帳號登入</p>
+
+    <!-- Google 登入初始化 -->
+    <div
+      id="g_id_onload"
+      data-client_id="669826332733-1pme1mv2gqsjv2352502nil70h9l9fim.apps.googleusercontent.com"
+      data-callback="handleLogin"
+      data-auto_prompt="false">
+    </div>
+
+    <!-- Google 登入按鈕 -->
+    <div
+      class="g_id_signin"
+      data-type="standard"
+      data-size="large"
+      data-theme="outline"
+      data-text="sign_in_with"
+      data-shape="pill"
+      data-logo_alignment="center">
+    </div>
+  </div>
+
+  <script>
+    function handleLogin(response) {
+      // 解析 Google 回傳的 JWT（只用來取使用者資料）
+      const payload = JSON.parse(
+        atob(response.credential.split('.')[1])
+      );
+
+      const user = {
+        id: payload.sub,
+        name: payload.name,
+        email: payload.email,
+        picture: payload.picture
+      };
+
+      // 記住目前登入使用者
+      localStorage.setItem("currentUser", JSON.stringify(user));
+
+      // 進入主系統
+      window.location.href = "app.html";
+    }
+  </script>
+
+</body>
+</html>
