@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>登入｜代購全能管理系統</title>
 
-  <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <style>
@@ -28,7 +27,6 @@
       width: 90%;
       max-width: 360px;
       text-align: center;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
     }
 
     h1 {
@@ -42,10 +40,16 @@
       margin-bottom: 28px;
     }
 
-    /* 關鍵：讓 Google 按鈕真正置中 */
-    .google-btn-wrap {
+    /* 🔒 鎖死 Google 按鈕區域 */
+    .google-lock {
+      width: 100%;
       display: flex;
       justify-content: center;
+    }
+
+    /* 🔨 壓過 Google 自己加的 inline style */
+    .google-lock > div {
+      margin: 0 auto !important;
     }
   </style>
 </head>
@@ -55,7 +59,6 @@
     <h1>代購全能管理系統</h1>
     <p>請使用 Google 帳號登入</p>
 
-    <!-- Google 登入初始化 -->
     <div
       id="g_id_onload"
       data-client_id="669826332733-1pme1mv2gqsjv2352502nil70h9l9fim.apps.googleusercontent.com"
@@ -63,8 +66,7 @@
       data-auto_prompt="false">
     </div>
 
-    <!-- Google 登入按鈕（已置中） -->
-    <div class="google-btn-wrap">
+    <div class="google-lock">
       <div
         class="g_id_signin"
         data-type="standard"
@@ -79,7 +81,6 @@
 
   <script>
     function handleLogin(response) {
-      // 解 JWT（只拿使用者資料）
       const payload = JSON.parse(
         atob(response.credential.split('.')[1])
       );
@@ -87,14 +88,10 @@
       const user = {
         id: payload.sub,
         name: payload.name,
-        email: payload.email,
-        picture: payload.picture
+        email: payload.email
       };
 
-      // 儲存目前登入使用者
       localStorage.setItem("currentUser", JSON.stringify(user));
-
-      // 登入成功 → 進主系統
       window.location.href = "app.html";
     }
   </script>
