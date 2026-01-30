@@ -1,37 +1,41 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>匯率計算 App A</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>匯率計算（App A）</title>
+
 <style>
 body {
-  background:#000;
-  color:#fff;
-  font-family:-apple-system;
-  padding:20px;
+  margin: 0;
+  background: #000;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+.container {
+  padding: 20px;
 }
 .card {
-  background:#111;
-  border:1px solid #333;
-  border-radius:16px;
-  padding:20px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 16px;
+  padding: 16px;
 }
 input {
-  width:100%;
-  padding:12px;
-  border-radius:10px;
-  border:1px solid #333;
-  background:#000;
-  color:#fff;
-  margin-bottom:10px;
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  border: 1px solid #333;
+  background: #000;
+  color: #fff;
 }
 button {
-  width:100%;
-  padding:14px;
-  border-radius:12px;
-  border:none;
-  font-weight:bold;
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  font-size: 16px;
 }
 .calc { background:#0a84ff; color:#fff; }
 .import { background:#32d74b; color:#000; margin-top:10px; }
@@ -39,51 +43,39 @@ button {
 </head>
 
 <body>
+<div class="container">
+  <h2>💰 匯率計算（App A）</h2>
 
-<h2>💰 匯率計算（App A）</h2>
+  <div class="card">
+    <input id="amount" placeholder="外幣金額">
+    <input id="rate" placeholder="匯率">
+    <input id="result" placeholder="HKD" readonly>
 
-<div class="card">
-  <input id="baseAmount" placeholder="輸入原始金額">
-  <input id="rate" placeholder="匯率">
-  <input id="result" placeholder="換算後金額（HKD）" readonly>
-
-  <button class="calc" onclick="calc()">計算</button>
-  <button class="import" onclick="exportToBook()">➕ 匯入帳本</button>
+    <button class="calc" onclick="calc()">計算</button>
+    <button class="import" onclick="importToB()">＋ 匯入帳本</button>
+  </div>
 </div>
 
 <script>
-const user = JSON.parse(localStorage.getItem("currentUser"));
-if (!user) {
-  document.body.innerHTML = "<h3>請先登入</h3>";
-}
-
 function calc() {
-  const amt = parseFloat(baseAmount.value) || 0;
-  const r = parseFloat(rate.value) || 0;
-  result.value = (amt * r).toFixed(2);
+  result.value = (amount.value * rate.value).toFixed(2);
 }
 
-function exportToBook() {
-  if (!result.value) {
-    alert("請先計算");
-    return;
-  }
-
-  const draft = {
-    baseAmount: baseAmount.value,
-    rate: rate.value,
-    sellPrice: result.value,
-    createdAt: Date.now()
+function importToB() {
+  const payload = {
+    brand: "",
+    name: "",
+    price: result.value,
+    rate: rate.value
   };
 
-  const key = `sharedData_${user.id}`;
-  const data = JSON.parse(localStorage.getItem(key)) || {};
-  data.importDraft = draft;
-  localStorage.setItem(key, JSON.stringify(data));
+  parent.postMessage({
+    type: "IMPORT_FROM_A",
+    payload
+  }, "*");
 
-  alert("✅ 已匯入帳本，請切到 App B");
+  alert("已即時匯入帳本");
 }
 </script>
-
 </body>
 </html>
