@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>訂單庫存管理系統</title>
+    <style>
+        :root { --green: #32d74b; --red: #ff453a; --card: #1c1c1e; --input: #2c2c2e; --blue: #0a84ff; --gray: #8e8e93; }
+        body { font-family: -apple-system, sans-serif; background-color: #000; color: white; padding: 15px; margin: 0; -webkit-user-select: none; }
+        
+        /* 主頁 UI */
+        .main-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 5px; }
+        .add-btn { background: var(--green); color: #000; border: none; width: 35px; height: 35px; border-radius: 50%; font-size: 24px; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        
+        /* 搜尋引擎 */
+        .search-container { position: relative; margin-bottom: 15px; z-index: 1000; }
+        .search-bar { width: 100%; background: var(--card); border: none; border-radius: 12px; padding: 12px 15px 12px 35px; color: white; font-size: 16px; box-sizing: border-box; outline: none; border: 1px solid #333; }
+        .search-icon { position: absolute; left: 12px; top: 12px; color: var(--gray); }
+        
+        #search-dropdown {
+            position: absolute; top: 50px; left: 0; right: 0;
+            background: #2c2c2e; border-radius: 15px; border: 1px solid #444;
+            max-height: 300px; overflow-y: auto; display: none; z-index: 9999;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .suggest-item { padding: 14px 15px; border-bottom: 1px solid #3a3a3c; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .label-type { color: var(--blue); font-size: 14px; font-weight: bold; }
+        .label-brand { color: var(--gray); font-size: 14px; margin-left: 5px; }
+
+        /* 列表卡片 */
+        .item-card { background-color: var(--card); border-radius: 18px; padding: 15px; margin-bottom: 10px; border: 1px solid #333; cursor: pointer; transition: background-color 0.8s linear; }
+        .item-card.holding { background-color: #7a0000 !important; }
+        .status-tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 6px; margin-top: 8px; background: #333; color: var(--blue); border: 1px solid var(--blue); }
+
+        /* 表單層面 */
+        #form-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 10000; overflow-y: auto; padding: 15px; box-sizing: border-box; -webkit-user-select: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 5px; margin-bottom: 10px; }
+        .card { background: var(--card); border-radius: 20px; padding: 20px; margin-bottom: 15px; border: 1px solid #333; }
+        .section-title { font-size: 13px; color: var(--gray); margin-bottom: 12px; }
+        .form-input { background: #2c2c2e; border: 1px solid #3a3a3c; color: white; padding: 14px; border-radius: 12px; width: 100%; box-sizing: border-box; margin-bottom: 10px; font-size: 16px; outline: none; }
+        
+        /* 狀態按鈕 */
+        .status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 5px; }
+        .status-btn { background: #2c2c2e; border: 1px solid #3a3a3c; border-radius: 10px; padding: 10px 5px; text-align: center; font-size: 13px; color: var(--gray); cursor: pointer; }
+        .status-btn.active { background: var(--blue); color: white; border-color: var(--blue); font-weight: bold; }
+
+        /* 國家選擇 */
+        .country-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 15px; }
+        .country-btn { background: #2c2c2e; border: 2px solid transparent; border-radius: 12px; padding: 10px 0; text-align: center; font-size: 22px; cursor: pointer; }
+        .country-btn.active { border-color: var(--blue); background: rgba(10, 132, 255, 0.1); }
+
+        /* 款式表格 */
+        .variant-input-group { display: flex; gap: 8px; margin-bottom: 10px; }
+        .v-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .v-row td { padding: 12px 5px; font-size: 15px; border-bottom: 1px solid #2c2c2e; }
+        .qty-edit { width: 55px; background: #000; border: 1px solid #48484a; color: var(--green); text-align: center; border-radius: 8px; padding: 5px; font-weight: bold; }
+
+        /* 成本紀錄明細 */
+        .profit-box { border: 2px solid var(--green); border-radius: 15px; padding: 15px; }
+        .data-line { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 10px; color: #d1d1d6; }
+        .item-profit-line { border-top: 1px solid #3a3a3c; padding-top: 10px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* 物流與最終利潤 */
+        .ship-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .ship-item { position: relative; }
+        .ship-input { text-align: right; padding-right: 40px; margin-bottom: 0 !important; }
+        .unit-tag { position: absolute; right: 12px; top: 14px; color: var(--gray); font-size: 14px; }
+        .final-profit-card { background: var(--green); color: #000; border-radius: 15px; padding: 15px; margin-top: 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        
+        #undo-toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1c1c1e; color: white; padding: 14px 22px; border-radius: 16px; display: none; align-items: center; gap: 25px; z-index: 20000; border: 1px solid #333; }
+    </style>
+</head>
+<body>
+
+<div id="main-page">
+    <div class="main-header">
+        <h1 style="font-size: 24px;">訂單管理</h1>
+        <button class="add-btn" onclick="openForm()">+</button>
+    </div>
+    <div class="search-container">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="main-search" class="search-bar" placeholder="搜尋品牌、名稱或款式..." oninput="doSmartSearch(this.value)">
+        <div id="search-dropdown"></div>
+    </div>
+    <div id="item-list"></div>
+</div>
+
+<div id="undo-toast">
+    <span>已刪除貨品</span>
+    <span style="color:var(--blue); font-weight:bold;" onclick="undoDelete()">復原</span>
+</div>
+
+<div id="form-overlay">
+    <div class="header">
+        <span onclick="closeForm()" style="color:var(--gray); cursor:pointer;">取消</span>
+        <b id="f-title">貨品資料管理</b>
+        <span style="color:var(--green); font-weight:bold; cursor:pointer;" onclick="saveData()">儲存</span>
+    </div>
+
+    <div class="card">
+        <div class="section-title">🌍 國家來源</div>
+        <div class="country-grid">
+            <div class="country-btn active" data-c="🇺🇸" onclick="selectCountry('🇺🇸', this)">🇺🇸</div>
+            <div class="country-btn" data-c="🇯🇵" onclick="selectCountry('🇯🇵', this)">🇯🇵</div>
+            <div class="country-btn" data-c="🇰🇷" onclick="selectCountry('🇰🇷', this)">🇰🇷</div>
+            <div class="country-btn" data-c="🇹🇼" onclick="selectCountry('🇹🇼', this)">🇹🇼</div>
+            <div class="country-btn" data-c="🇹🇭" onclick="selectCountry('🇹🇭', this)">🇹🇭</div>
+        </div>
+        <input type="hidden" id="selectedCountry" value="🇺🇸">
+
+        <div class="section-title">📦 基本資訊</div>
+        <input type="text" id="brandName" class="form-input" placeholder="品牌">
+        <input type="text" id="itemName" class="form-input" placeholder="貨品名稱">
+        <input type="url" id="itemUrl" class="form-input" placeholder="🔗 貨品網站連結 (選填)">
+        
+        <div class="section-title">✨ 款式與數量</div>
+        <div class="variant-input-group">
+            <input type="text" id="vName" class="form-input" style="flex:2; margin:0;" placeholder="款式 / 顏色">
+            <input type="number" id="vQty" class="form-input" style="flex:0.8; margin:0; text-align:center;" value="1">
+            <button style="background:var(--blue); color:white; border:none; border-radius:12px; padding:0 15px; font-weight:bold;" onclick="addRow()">增加</button>
+        </div>
+        <table class="v-table" id="vTable"></table>
+    </div>
+
+    <div class="card">
+        <div class="section-title">🚩 訂單狀態</div>
+        <div class="status-grid">
+            <div class="status-btn" onclick="setStatus('已截', this)">已截</div>
+            <div class="status-btn" onclick="setStatus('已買', this)">已買</div>
+            <div class="status-btn" onclick="setStatus('已到海外倉', this)">已到海外倉</div>
+            <div class="status-btn" onclick="setStatus('已到港', this)">已到港</div>
+            <div class="status-btn" onclick="setStatus('已取', this)">已取</div>
+        </div>
+        <input type="hidden" id="currentStatus" value="">
+    </div>
+
+    <div class="card">
+        <div class="section-title">📒 成本明細紀錄 (自動)</div>
+        <div class="profit-box">
+            <div class="data-line"><span>當地貨幣原價</span><span id="d-origin">12,000 KRW</span></div>
+            <div class="data-line"><span>換算港幣成本</span><span id="d-hkd">$ 68.40</span></div>
+            <div class="data-line"><span>固定成本</span><span id="d-fixed">$ 27.00</span></div>
+            <div class="data-line"><span>💰 單件賣價</span><span id="d-sell">$ 150.00</span></div>
+            <div class="item-profit-line">
+                <span style="color:var(--green); font-weight:bold;">🛍️ 貨品淨利 (<span id="total-qty">0</span> 件)</span>
+                <span style="color:var(--green); font-weight:bold; font-size:18px;" id="item-profit-total">$ 0.00</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="section-title">🚚 物流紀錄</div>
+        <div class="ship-grid">
+            <div class="ship-item">
+                <input type="text" inputmode="decimal" class="form-input ship-input" id="ship-weight" placeholder="0" oninput="updateAll()">
+                <span class="unit-tag">lb</span>
+            </div>
+            <div class="ship-item">
+                <input type="text" inputmode="decimal" class="form-input ship-input" id="ship-fee" placeholder="0" oninput="updateAll()">
+                <span class="unit-tag">$</span>
+            </div>
+        </div>
+        <div class="final-profit-card" id="finalCard">
+            <div>💰 最終淨利 (HKD)</div>
+            <div id="final-profit-val" style="font-size: 24px;">$ 0.00</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let inventory = JSON.parse(localStorage.getItem('myStocks')) || [];
+    let lastDeleted = null;
+    let editingIdx = null;
+    let calcData = { origin: "12,000 KRW", hkdCost: 68.4, fixedExtra: 27.0, sellPrice: 150.0 };
+
+    // --- 🔍 智能搜尋 ---
+    function doSmartSearch(query) {
+        const dropdown = document.getElementById('search-dropdown');
+        if (!query) { dropdown.style.display = 'none'; renderList(); return; }
+        let results = [], q = query.toLowerCase(), foundBrands = new Set();
+        inventory.forEach(item => {
+            if (item.brand.toLowerCase().includes(q) && !foundBrands.has(item.brand)) {
+                results.push({ type: '品牌', text: item.brand, brand: item.brand, icon: '🏷️' });
+                foundBrands.add(item.brand);
+            }
+            if (item.name.toLowerCase().includes(q)) results.push({ type: '貨品', text: item.name, brand: item.brand, icon: '🛍️' });
+            item.variants.forEach(v => { if (v.name.toLowerCase().includes(q)) results.push({ type: '款式', text: v.name, brand: item.brand, icon: '🎨' }); });
+        });
+        dropdown.innerHTML = results.slice(0, 8).map(res => `
+            <div class="suggest-item" onclick="selectSearch('${res.text}')">
+                <span class="label-type">${res.icon} ${res.type}:</span>
+                <span style="color:#eee">${res.text}</span>
+                ${res.type !== '品牌' ? `<span class="label-brand">(${res.brand})</span>` : ''}
+            </div>`).join('');
+        dropdown.style.display = results.length ? 'block' : 'none';
+        renderList(query);
+    }
+    function selectSearch(t) { document.getElementById('main-search').value = t; document.getElementById('search-dropdown').style.display = 'none'; renderList(t); }
+
+    // --- 列表渲染 ---
+    function renderList(filter = "") {
+        const list = document.getElementById('item-list');
+        list.innerHTML = "";
+        inventory.forEach((item, idx) => {
+            const vStr = item.variants.map(v => v.name).join(' ');
+            if (filter && !(item.brand + item.name + vStr).toLowerCase().includes(filter.toLowerCase())) return;
+            const totalQ = item.variants.reduce((a, b) => a + (parseInt(b.qty) || 0), 0);
+            const card = document.createElement('div');
+            card.className = 'item-card';
+            card.innerHTML = `
+                <div class="item-brand">${item.country} ${item.brand}</div>
+                <div style="font-weight:bold;margin:4px 0; font-size:17px;">${item.name}</div>
+                <div style="font-size:13px;color:var(--gray);">庫存: ${totalQ} | 淨利: $${item.finalP}</div>
+                ${item.status ? `<div class="status-tag">${item.status}</div>` : ''}
+            `;
+            setupLongPress(card, idx);
+            list.appendChild(card);
+        });
+    }
+
+    function setupLongPress(card, idx) {
+        let holdTimer, startTime, isLongPress = false;
+        card.addEventListener('touchstart', (e) => { 
+            startTime = Date.now(); card.classList.add('holding');
+            holdTimer = setTimeout(() => { isLongPress = true; deleteItem(idx); }, 800);
+        });
+        card.addEventListener('touchend', () => {
+            clearTimeout(holdTimer); card.classList.remove('holding');
+            if (!isLongPress && (Date.now() - startTime < 800)) openForm(idx);
+            isLongPress = false;
+        });
+    }
+
+    // --- 表單功能 ---
+    function openForm(idx = null) {
+        editingIdx = idx;
+        document.getElementById('form-overlay').style.display = 'block';
+        document.getElementById('vTable').innerHTML = "";
+        document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
+        
+        if (idx !== null) {
+            const d = inventory[idx];
+            document.getElementById('f-title').innerText = "編輯資料";
+            document.getElementById('brandName').value = d.brand;
+            document.getElementById('itemName').value = d.name;
+            document.getElementById('itemUrl').value = d.url || "";
+            document.getElementById('selectedCountry').value = d.country;
+            document.getElementById('currentStatus').value = d.status || "";
+            document.querySelectorAll('.status-btn').forEach(b => { if(b.innerText === d.status) b.classList.add('active'); });
+            document.querySelectorAll('.country-btn').forEach(b => b.classList.toggle('active', b.dataset.c === d.country));
+            document.getElementById('ship-weight').value = d.weight || "";
+            document.getElementById('ship-fee').value = d.shipFee || "";
+            (d.variants || []).forEach(v => addRowToTable(v.name, v.qty));
+        } else {
+            document.getElementById('f-title').innerText = "新增資料";
+            document.getElementById('brandName').value = "";
+            document.getElementById('itemName').value = "";
+            document.getElementById('itemUrl').value = "";
+            document.getElementById('currentStatus').value = "";
+            document.getElementById('ship-weight').value = "";
+            document.getElementById('ship-fee').value = "";
+        }
+        updateAll();
+    }
+
+    function setStatus(s, el) {
+        document.getElementById('currentStatus').value = s;
+        document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+    }
+
+    function addRow() {
+        const n = document.getElementById('vName').value, q = document.getElementById('vQty').value;
+        if (n) { addRowToTable(n, q); document.getElementById('vName').value = ""; updateAll(); }
+    }
+
+    function addRowToTable(n, q) {
+        const row = document.getElementById('vTable').insertRow();
+        row.className = 'v-row';
+        row.innerHTML = `<td><b>${n}</b></td><td style="text-align:right"><input type="number" class="qty-edit" value="${q}" oninput="updateAll()"> 件</td><td style="color:var(--red); text-align:right; padding-left:10px;" onclick="this.parentElement.remove(); updateAll();">✕</td>`;
+    }
+
+    function updateAll() {
+        let totalQty = 0;
+        document.querySelectorAll('.qty-edit').forEach(i => totalQty += parseInt(i.value) || 0);
+        const itemProfit = totalQty * (calcData.sellPrice - (calcData.hkdCost + calcData.fixedExtra));
+        const shipFee = parseFloat(document.getElementById('ship-fee').value) || 0;
+        const finalProfit = itemProfit - shipFee;
+
+        document.getElementById('total-qty').innerText = totalQty;
+        document.getElementById('item-profit-total').innerText = "$ " + itemProfit.toFixed(2);
+        document.getElementById('final-profit-val').innerText = "$ " + finalProfit.toFixed(2);
+        document.getElementById('finalCard').style.backgroundColor = finalProfit < 0 ? "#ff453a" : "#32d74b";
+    }
+
+    function saveData() {
+        const vars = [];
+        document.querySelectorAll('.v-row').forEach(r => vars.push({ name: r.cells[0].innerText, qty: r.querySelector('.qty-edit').value }));
+        const data = {
+            country: document.getElementById('selectedCountry').value,
+            brand: document.getElementById('brandName').value || "未命名",
+            name: document.getElementById('itemName').value || "未命名",
+            url: document.getElementById('itemUrl').value,
+            status: document.getElementById('currentStatus').value,
+            variants: vars,
+            weight: document.getElementById('ship-weight').value,
+            shipFee: document.getElementById('ship-fee').value,
+            finalP: document.getElementById('final-profit-val').innerText.replace('$ ', '')
+        };
+        if (editingIdx !== null) inventory[editingIdx] = data; else inventory.push(data);
+        localStorage.setItem('myStocks', JSON.stringify(inventory));
+        renderList(); closeForm();
+    }
+
+    function deleteItem(idx) {
+        lastDeleted = { index: idx, data: inventory[idx] };
+        inventory.splice(idx, 1);
+        localStorage.setItem('myStocks', JSON.stringify(inventory));
+        renderList();
+        document.getElementById('undo-toast').style.display = 'flex';
+        setTimeout(() => document.getElementById('undo-toast').style.display = 'none', 5000);
+    }
+
+    function undoDelete() {
+        if (lastDeleted) {
+            inventory.splice(lastDeleted.index, 0, lastDeleted.data);
+            localStorage.setItem('myStocks', JSON.stringify(inventory));
+            renderList();
+            document.getElementById('undo-toast').style.display = 'none';
+            lastDeleted = null;
+        }
+    }
+
+    function selectCountry(c, el) { 
+        document.getElementById('selectedCountry').value = c; 
+        document.querySelectorAll('.country-btn').forEach(b => b.classList.remove('active')); 
+        el.classList.add('active'); 
+    }
+    function closeForm() { document.getElementById('form-overlay').style.display = 'none'; }
+    
+    renderList();
+</script>
+</body>
+</html>
