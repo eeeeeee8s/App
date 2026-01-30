@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>代購全能管理系統</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 20px;
+    }
+    .card {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 20px;
+      max-width: 420px;
+      margin: auto;
+    }
+    h1 {
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+    p {
+      color: #aaa;
+      font-size: 14px;
+    }
+    .email {
+      margin-top: 15px;
+      color: #0a84ff;
+      word-break: break-all;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 12px;
+      background: #ff453a;
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h1>登入成功 🎉</h1>
+    <p>你已經成功使用 Google 登入</p>
+    <div class="email" id="email"></div>
+
+    <button onclick="logout()">登出</button>
+  </div>
+
+  <script>
+    const user = JSON.parse(localStorage.getItem("currentUser"));
+
+    if (!user) {
+      // 沒登入就踢回登入頁
+      window.location.href = "index.html";
+    } else {
+      document.getElementById("email").innerText =
+        "目前登入帳號：" + user.email;
+    }
+
+    function logout() {
+      localStorage.removeItem("currentUser");
+      window.location.href = "index.html";
+    }
+  </script>
+
+</body>
+</html>
