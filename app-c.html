@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>顧客訂單管理</title>
+    <style>
+        :root { --green: #32d74b; --red: #ff453a; --card: #1c1c1e; --input: #2c2c2e; --blue: #0a84ff; --yellow: #ffd60a; }
+        body { 
+            font-family: -apple-system, sans-serif; background: #000; color: white; padding: 15px; margin: 0; 
+            -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+        }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 5px; }
+        .add-btn { background: var(--green); color: #000; border: none; width: 38px; height: 38px; border-radius: 50%; font-size: 26px; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+
+        .search-container { margin-bottom: 20px; position: relative; }
+        .search-bar { width: 100%; background: var(--card); border: 1px solid #333; border-radius: 12px; padding: 12px 15px 12px 40px; color: white; font-size: 16px; box-sizing: border-box; outline: none; -webkit-user-select: text; user-select: text; }
+        
+        .order-container { background: var(--card); border: 1px solid #333; border-radius: 20px; padding: 18px; margin-bottom: 12px; position: relative; transition: background 0.8s cubic-bezier(0.4, 0, 0.2, 1), transform 0.1s; }
+        .order-container.pressing { background: #880000 !important; transform: scale(0.96); }
+        .order-id { font-size: 17px; font-weight: bold; margin-bottom: 4px; display: block; }
+        .order-no { font-size: 12px; color: var(--yellow); margin-bottom: 5px; display: block; }
+        .order-meta { color: #8e8e93; font-size: 14px; line-height: 1.5; }
+
+        .suggestion-list { position: absolute; background: #2c2c2e; border-radius: 12px; z-index: 8000; border: 1px solid #444; display: none; width: 100%; box-shadow: 0 10px 20px rgba(0,0,0,0.5); max-height: 250px; overflow-y: auto; margin-top: 5px; }
+        .suggestion-item { padding: 14px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; color: white; }
+
+        #undo-toast { position: fixed; bottom: 30px; left: 15px; right: 15px; background: #2c2c2e; border: 1px solid #444; padding: 16px 20px; border-radius: 16px; display: none; justify-content: space-between; align-items: center; z-index: 9999; }
+        #undo-toast button { background: transparent; color: var(--blue); border: none; font-size: 16px; font-weight: bold; }
+
+        #form-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 6000; overflow-y: auto; padding: 20px; box-sizing: border-box; -webkit-user-select: text; user-select: text; }
+        .card { background: var(--card); border-radius: 20px; padding: 18px; margin-bottom: 15px; border: 1px solid #333; position: relative; }
+        input, select, textarea { background: var(--input); border: none; color: white; padding: 14px; border-radius: 12px; width: 100%; box-sizing: border-box; margin-bottom: 12px; font-size: 16px; outline: none; }
+        
+        .datetime-group { display: flex; gap: 10px; margin-bottom: 12px; }
+        .datetime-group input { flex: 1; margin-bottom: 0; }
+        
+        .delivery-detail { display: none; background: #262629; padding: 15px; border-radius: 15px; margin-top: 10px; border: 1px solid #444; }
+        .active-delivery { display: block; }
+        
+        .sync-tool-btn { flex: 1; background: var(--green); color: #000; padding: 12px; border-radius: 12px; font-weight: bold; border: none; font-size: 14px; }
+        .sync-history-btn { width: 100%; background: var(--blue); color: white; padding: 14px; border-radius: 12px; font-weight: bold; border: none; font-size: 15px; margin-bottom: 15px; }
+        .yellow-btn { width: 100%; background: var(--yellow); color: #000; padding: 14px; border-radius: 12px; font-weight: bold; border: none; font-size: 15px; margin-top: 5px; }
+        .nt-btn { flex: 1; padding: 15px; border-radius: 12px; border: none; font-weight: bold; background: var(--yellow); color: #000; }
+        .notify-bar { display: flex; gap: 10px; margin-top: 15px; border-top: 1px solid #444; padding-top: 15px; }
+
+        #msg-popup { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9000; align-items: center; justify-content: center; }
+        .msg-box { background: #2c2c2e; width: 85%; border-radius: 20px; padding: 20px; }
+        .msg-text { background: #1c1c1e; padding: 15px; border-radius: 12px; font-size: 14px; line-height: 1.6; color: #fff; margin: 15px 0; white-space: pre-wrap; }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+<div class="header">
+    <h1 style="margin:0;">訂單清單</h1>
+    <button class="add-btn" onclick="openForm()">+</button>
+</div>
+
+<div class="search-container">
+    <div style="position: absolute; left: 15px; top: 14px; color: #8e8e93;">🔍</div>
+    <input type="text" id="main-search" class="search-bar" placeholder="搜尋 產品、款式、用戶..." oninput="handleSmartSearch(this)">
+    <div id="main-suggestions" class="suggestion-list"></div>
+</div>
+
+<div id="order-list"></div>
+
+<div id="undo-toast">
+    <span>已刪除 @<span id="del-name"></span></span>
+    <button onclick="undoDelete()">復原</button>
+</div>
+
+<div id="form-overlay">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <span onclick="closeForm()" style="color:#8e8e93; font-size:17px;">取消</span>
+        <b style="font-size:18px;">訂單資料</b>
+        <span onclick="handleSave()" style="color:var(--green); font-weight:bold; font-size:17px;">儲存</span>
+    </div>
+
+    <input type="hidden" id="edit-index">
+    
+    <div class="card">
+        <div style="font-size:13px; color:#8e8e93; margin-bottom:10px;">👤 顧客與編號</div>
+        <input type="text" id="order-num-display" placeholder="訂單編號" readonly style="color:var(--yellow); font-weight:bold; background:#1c1c1e;">
+        
+        <div style="position:relative; margin-bottom:12px;">
+            <input type="text" id="cust-id" placeholder="用戶名稱 (ID)" oninput="handleInputSuggestion(this, 'id'); handleIdInput(this)" style="margin-bottom:0;">
+            <div id="id-suggestions" class="suggestion-list" style="top:50px;"></div>
+        </div>
+        
+        <div style="position:relative; margin-bottom:12px;">
+            <input type="tel" id="cust-phone" placeholder="聯絡電話" oninput="handleInputSuggestion(this, 'phone')" style="margin-bottom:0;">
+            <div id="phone-suggestions" class="suggestion-list" style="top:50px;"></div>
+        </div>
+        
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
+            <input type="checkbox" id="is-paid" style="width:22px; height:22px;"> <label>已入數</label>
+        </div>
+        
+        <div class="datetime-group">
+            <input type="date" id="pay-date">
+            <input type="time" id="pay-time">
+        </div>
+    </div>
+
+    <div class="card">
+        <div style="font-size:13px; color:#8e8e93; margin-bottom:10px;">🛍️ 訂購內容</div>
+        <select id="select-product" onchange="syncVariants()"><option value="">選擇貨品</option><option value="拼色布袋">拼色布袋</option></select>
+        <select id="select-variant"><option value="">選擇款式</option></select>
+        <button class="yellow-btn" onclick="createMsg('new-order')">📋 複製訂單編號文字</button>
+    </div>
+
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <span style="font-size:13px; color:#8e8e93;">🚚 交收資料</span>
+            <button style="background:var(--red); color:white; border:none; padding:6px 12px; border-radius:8px; font-size:12px;" onclick="handleDeliveryClear()">🧹 清除</button>
+        </div>
+        
+        <button class="sync-history-btn" onclick="syncLastDelivery()">🔄 同步上次送貨資料</button>
+        
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
+            <button class="sync-tool-btn" onclick="syncSpecific('name')">👤 同步名字</button>
+            <button class="sync-tool-btn" onclick="syncSpecific('phone')">📞 同步電話</button>
+        </div>
+
+        <select id="delivery-type" onchange="toggleFields()">
+            <option value="sf">順豐速運</option><option value="ecship">易寄取</option><option value="post">平郵</option><option value="face">面交</option>
+        </select>
+
+        <div id="detail-sf" class="delivery-detail active-delivery">
+            <input type="text" id="sf-name" placeholder="收件姓名"><input type="tel" id="sf-phone" placeholder="收件電話">
+            <select id="sf-mode" onchange="checkSfHome()"><option value="station">順豐站</option><option value="locker">智能櫃</option><option value="store">合作點</option><option value="home">直送</option></select>
+            <input type="text" id="sf-code" placeholder="點碼">
+            <textarea id="sf-address" placeholder="詳細地址" rows="2"></textarea>
+        </div>
+        <div id="detail-ecship" class="delivery-detail">
+            <input type="text" id="ec-name" placeholder="姓名"><input type="tel" id="ec-phone" placeholder="電話">
+            <input type="text" id="ec-code" placeholder="取件點碼"><textarea id="ec-address" placeholder="取件點地址" rows="2"></textarea>
+        </div>
+        <div id="detail-post" class="delivery-detail">
+            <input type="text" id="post-name" placeholder="姓名"><textarea id="post-address" placeholder="詳細地址" rows="3"></textarea>
+        </div>
+        <div id="detail-face" class="delivery-detail">
+            <input type="datetime-local" id="face-time"><input type="text" id="face-loc" placeholder="面交地點">
+        </div>
+
+        <div class="notify-bar" id="notify-section">
+            <button class="nt-btn" onclick="createMsg('arrived')">🚛 通知到港</button>
+            <button class="nt-btn" onclick="createMsg('shipped')">🚀 通知寄出</button>
+        </div>
+    </div>
+</div>
+
+<div id="msg-popup">
+    <div class="msg-box">
+        <div id="msg-content" class="msg-text"></div>
+        <button onclick="copyAndClose()" style="background:var(--blue); color:white; border:none; width:100%; padding:15px; border-radius:12px; font-weight:bold;">複製並關閉</button>
+        <button onclick="document.getElementById('msg-popup').style.display='none'" style="background:none; border:none; color:#8e8e93; width:100%; margin-top:15px;">取消</button>
+    </div>
+</div>
+
+<script>
+let orders = JSON.parse(localStorage.getItem('myOrders')) || [];
+const productVariants = { "拼色布袋": ["白色", "黃色", "黑色"] };
+let lastDeleted = null; let lastDeletedIndex = null;
+let pressTimer = null; let isLongPress = false;
+
+// ✨ 恢復：ID輸入立即生成編號邏輯
+function handleIdInput(input) {
+    const val = input.value.trim();
+    if (val && document.getElementById('edit-index').value === "") generateOrderNo(val);
+}
+
+function generateOrderNo(targetId) {
+    const id = targetId || document.getElementById('cust-id').value.trim();
+    if (!id || document.getElementById('edit-index').value !== "") return;
+    const count = orders.filter(o => o.id.toLowerCase() === id.toLowerCase()).length + 1;
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    document.getElementById('order-num-display').value = `${count}-${random}`;
+}
+
+// ✨ 整合：強大的搜尋與渲染
+function renderOrders(filter = "") {
+    const list = document.getElementById('order-list'); list.innerHTML = "";
+    orders.forEach((o, i) => {
+        const pool = `${o.id} ${o.phone} ${o.product} ${o.variant}`.toLowerCase();
+        if (filter && !pool.includes(filter)) return;
+        const div = document.createElement('div'); div.className = 'order-container';
+        div.onpointerdown = () => { isLongPress = false; div.classList.add('pressing'); pressTimer = setTimeout(() => { isLongPress = true; executeDelete(i); }, 800); };
+        div.onpointerup = () => { div.classList.remove('pressing'); clearTimeout(pressTimer); if (!isLongPress) openForm(i); };
+        div.onpointercancel = () => { div.classList.remove('pressing'); clearTimeout(pressTimer); };
+        div.innerHTML = `<span class="order-id">@${o.id} ${o.isPaid ? '<span style="color:var(--green);font-size:12px;">[已入數]</span>' : ''}</span>
+                         <span class="order-no">#${o.orderNo || '無'}</span>
+                         <div class="order-meta">${o.product||''} (${o.variant||''})<br>${o.phone||''}</div>`;
+        list.appendChild(div);
+    });
+}
+
+function handleSmartSearch(input) {
+    const val = input.value.trim().toLowerCase();
+    const box = document.getElementById('main-suggestions');
+    renderOrders(val);
+    if (!val) { box.style.display = 'none'; return; }
+    box.innerHTML = '';
+    let foundIds = [];
+    orders.forEach(o => {
+        const isIdMatch = o.id.toLowerCase().includes(val);
+        const isPhoneMatch = (o.phone || "").includes(val);
+        if((isIdMatch || isPhoneMatch) && !foundIds.includes(o.id)) {
+            foundIds.push(o.id);
+            const div = document.createElement('div'); div.className = 'suggestion-item';
+            const label = isPhoneMatch ? `📞 ${o.phone} (@${o.id})` : `👤 @${o.id}`;
+            div.innerHTML = `<span><b>${label}</b></span> <button style="background:var(--blue); color:white; border:none; padding:6px 12px; border-radius:8px; font-size:12px;" onclick="quickOrder('${o.id}')">填入</button>`;
+            box.appendChild(div);
+        }
+    });
+    box.style.display = box.children.length ? 'block' : 'none';
+}
+
+function quickOrder(id) {
+    const hist = [...orders].reverse().find(o => o.id === id);
+    openForm();
+    setTimeout(() => {
+        document.getElementById('cust-id').value = id;
+        if(hist) document.getElementById('cust-phone').value = hist.phone || '';
+        generateOrderNo(id);
+        document.getElementById('main-suggestions').style.display = 'none';
+        document.getElementById('main-search').value = "";
+    }, 200);
+}
+
+// ✨ 恢復：正確的通知訊息格式
+function createMsg(type) {
+    const orderNo = document.getElementById('order-num-display').value || "尚未生成";
+    const prod = document.getElementById('select-product').value || "(貨品)";
+    const variant = document.getElementById('select-variant').value || "(款式)";
+    let msg = "";
+    if (type === 'new-order') msg = `你好 ！你嘅訂單編號係\n✨【${orderNo}】\n到港同出貨都會通知你！\n多謝你嘅支持💝`;
+    else if (type === 'arrived') msg = `你好 ！你訂嘅\n✨【${prod} ${variant}】\n貨品已經到港！🚛\n收貨後會盡快安排出貨 感謝你的等候 💝`;
+    else if (type === 'shipped') msg = `你好 ！你訂嘅\n✨【${prod} ${variant}】\n已出貨！🚀\n好快就會到你手！多謝你嘅支持💝`;
+    document.getElementById('msg-content').innerText = msg;
+    document.getElementById('msg-popup').style.display = 'flex';
+}
+
+// ✨ 恢復：同步上次送貨紀錄
+function syncLastDelivery() {
+    const id = document.getElementById('cust-id').value.trim();
+    if (!id) { alert("請先輸入用戶名稱"); return; }
+    const hist = [...orders].reverse().find(o => o.id === id && o.delType);
+    if (!hist) { alert("找不到歷史紀錄"); return; }
+    document.getElementById('delivery-type').value = hist.delType; toggleFields();
+    if(hist.delType === 'sf') {
+        document.getElementById('sf-name').value = hist.sfName || ''; document.getElementById('sf-phone').value = hist.sfPhone || '';
+        document.getElementById('sf-mode').value = hist.sfMode || 'station'; document.getElementById('sf-code').value = hist.sfCode || '';
+        document.getElementById('sf-address').value = hist.sfAddress || ''; checkSfHome();
+    } else if(hist.delType === 'ecship') {
+        document.getElementById('ec-name').value = hist.ecName || ''; document.getElementById('ec-phone').value = hist.ecPhone || '';
+        document.getElementById('ec-code').value = hist.ecCode || ''; document.getElementById('ec-address').value = hist.ecAddress || '';
+    } else if(hist.delType === 'post') {
+        document.getElementById('post-name').value = hist.postName || ''; document.getElementById('post-address').value = hist.postAddress || '';
+    }
+}
+
+// 其他基礎功能
+function openForm(i = null) {
+    document.getElementById('form-overlay').style.display = 'block';
+    if (i !== null) {
+        const d = orders[i];
+        document.getElementById('edit-index').value = i;
+        document.getElementById('cust-id').value = d.id;
+        document.getElementById('cust-phone').value = d.phone;
+        document.getElementById('order-num-display').value = d.orderNo || '';
+        document.getElementById('is-paid').checked = d.isPaid || false;
+        document.getElementById('pay-date').value = d.payDate || '';
+        document.getElementById('pay-time').value = d.payTime || '';
+        document.getElementById('select-product').value = d.product || '';
+        syncVariants(); document.getElementById('select-variant').value = d.variant || '';
+        document.getElementById('delivery-type').value = d.delType || 'sf';
+        toggleFields();
+        if(d.delType==='sf'){ 
+            document.getElementById('sf-name').value=d.sfName||''; document.getElementById('sf-phone').value=d.sfPhone||''; 
+            document.getElementById('sf-mode').value=d.sfMode||'station'; document.getElementById('sf-code').value=d.sfCode||''; 
+            document.getElementById('sf-address').value=d.sfAddress||''; checkSfHome();
+        }
+    } else {
+        document.getElementById('edit-index').value = ""; 
+        document.querySelectorAll('#form-overlay input:not([type=checkbox]), #form-overlay select, #form-overlay textarea').forEach(el => el.value = "");
+        document.getElementById('is-paid').checked = false;
+        document.getElementById('delivery-type').value = 'sf'; toggleFields();
+    }
+}
+
+function handleSave() {
+    const id = document.getElementById('cust-id').value; if (!id) return;
+    const data = {
+        id, phone: document.getElementById('cust-phone').value, orderNo: document.getElementById('order-num-display').value,
+        isPaid: document.getElementById('is-paid').checked, payDate: document.getElementById('pay-date').value, payTime: document.getElementById('pay-time').value,
+        product: document.getElementById('select-product').value, variant: document.getElementById('select-variant').value, delType: document.getElementById('delivery-type').value,
+        sfName: document.getElementById('sf-name')?.value, sfPhone: document.getElementById('sf-phone')?.value,
+        sfMode: document.getElementById('sf-mode')?.value, sfCode: document.getElementById('sf-code')?.value, sfAddress: document.getElementById('sf-address')?.value,
+        ecName: document.getElementById('ec-name')?.value, ecPhone: document.getElementById('ec-phone')?.value, ecCode: document.getElementById('ec-code')?.value, ecAddress: document.getElementById('ec-address')?.value,
+        postName: document.getElementById('post-name')?.value, postAddress: document.getElementById('post-address')?.value
+    };
+    const idx = document.getElementById('edit-index').value;
+    if (idx !== "") orders[idx] = data; else orders.push(data);
+    saveData(); renderOrders(); closeForm();
+}
+
+function handleInputSuggestion(input, type) {
+    const val = input.value.trim().toLowerCase();
+    const box = document.getElementById(type + '-suggestions');
+    if (!val || (type === 'phone' && val.length < 3)) { box.style.display = 'none'; return; }
+    let matches = orders.filter(o => (type === 'id' ? o.id : o.phone).toLowerCase().includes(val));
+    const unique = Array.from(new Set(matches.map(m => m.id))).map(id => matches.find(m => m.id === id));
+    box.innerHTML = '';
+    unique.slice(0, 5).forEach(m => {
+        const div = document.createElement('div'); div.className = 'suggestion-item';
+        div.innerHTML = `<b>${type === 'phone' ? '📞 '+m.phone : '👤 @'+m.id}</b>`;
+        div.onclick = () => { 
+            document.getElementById('cust-id').value = m.id; 
+            document.getElementById('cust-phone').value = m.phone || ''; 
+            generateOrderNo(m.id); box.style.display = 'none'; 
+        };
+        box.appendChild(div);
+    });
+    box.style.display = box.children.length ? 'block' : 'none';
+}
+
+function executeDelete(index) { if (window.navigator.vibrate) window.navigator.vibrate(60); lastDeleted = orders[index]; lastDeletedIndex = index; document.getElementById('del-name').innerText = lastDeleted.id; orders.splice(index, 1); saveData(); renderOrders(); document.getElementById('undo-toast').style.display = 'flex'; setTimeout(() => { document.getElementById('undo-toast').style.display = 'none'; }, 6000); }
+function undoDelete() { if (lastDeleted) { orders.splice(lastDeletedIndex, 0, lastDeleted); saveData(); renderOrders(); document.getElementById('undo-toast').style.display = 'none'; lastDeleted = null; } }
+function toggleFields() { document.querySelectorAll('.delivery-detail').forEach(d => d.classList.remove('active-delivery')); document.getElementById('detail-' + document.getElementById('delivery-type').value).classList.add('active-delivery'); }
+function checkSfHome() { document.getElementById('sf-code').style.display = (document.getElementById('sf-mode').value === 'home') ? 'none' : 'block'; }
+function syncSpecific(type) { const id = document.getElementById('cust-id').value; const phone = document.getElementById('cust-phone').value; const mode = document.getElementById('delivery-type').value; const prefix = (mode==='ecship')?'ec':(mode==='sf')?'sf':(mode==='post')?'post':''; if(!prefix) return; if(type === 'name' && document.getElementById(prefix+'-name')) document.getElementById(prefix+'-name').value = id; if(type === 'phone' && document.getElementById(prefix+'-phone')) document.getElementById(prefix+'-phone').value = phone; }
+function syncVariants() { const prod = document.getElementById('select-product').value; const vSelect = document.getElementById('select-variant'); vSelect.innerHTML = '<option value="">選擇款式</option>'; if (productVariants[prod]) productVariants[prod].forEach(v => { let opt = document.createElement('option'); opt.value = v; opt.text = v; vSelect.appendChild(opt); }); }
+function handleDeliveryClear() { document.querySelectorAll('.delivery-detail input, .delivery-detail textarea').forEach(el => el.value = ""); }
+function copyAndClose() { navigator.clipboard.writeText(document.getElementById('msg-content').innerText).then(() => { alert("✅ 已複製"); document.getElementById('msg-popup').style.display = 'none'; }); }
+function saveData() { localStorage.setItem('myOrders', JSON.stringify(orders)); }
+function closeForm() { document.getElementById('form-overlay').style.display = 'none'; }
+renderOrders();
+</script>
+</body>
+</html>
