@@ -1,189 +1,154 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>帳本（App B）</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>帳本</title>
 
 <style>
 body {
   margin: 0;
+  padding: 20px;
   background: #000;
   color: #fff;
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
 }
-.container {
-  padding: 20px;
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
 }
-.card {
+
+.add {
+  background: #32d74b;
+  color: #000;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 22px;
+}
+
+.item {
   background: #111;
   border: 1px solid #333;
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-input {
-  width: 100%;
-  padding: 12px;
+  border-radius: 14px;
+  padding: 14px;
   margin-bottom: 10px;
-  border-radius: 10px;
-  border: 1px solid #333;
-  background: #000;
-  color: #fff;
 }
-button {
+
+#form {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #000;
+  padding: 20px;
+}
+
+input {
   width: 100%;
   padding: 14px;
   border-radius: 12px;
   border: none;
-  font-size: 16px;
-}
-.save { background:#32d74b; color:#000; }
-.delete { background:#ff453a; color:#fff; margin-top:8px; }
-
-.item {
-  border-bottom: 1px solid #333;
-  padding: 12px 0;
-}
-.item small {
-  color:#aaa;
+  background: #222;
+  color: #fff;
+  margin-bottom: 12px;
 }
 
-.add {
-  position: fixed;
-  right: 20px;
-  bottom: 20px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  font-size: 28px;
+button.save {
   background: #0a84ff;
   color: #fff;
+  border: none;
+  padding: 14px;
+  width: 100%;
+  border-radius: 12px;
 }
 </style>
 </head>
 
 <body>
-<div class="container">
-  <h2>📦 帳本（App B）</h2>
 
-  <div class="card">
-    <input id="brand" placeholder="品牌">
-    <input id="name" placeholder="商品名稱">
-    <input id="price" placeholder="售價 (HKD)">
-    <input id="rate" placeholder="匯率">
-
-    <button class="save" onclick="save()">儲存商品</button>
-    <button class="delete" onclick="remove()" id="deleteBtn" style="display:none">
-      刪除此商品
-    </button>
-  </div>
-
-  <div class="card">
-    <h3>商品列表</h3>
-    <div id="list"></div>
-  </div>
+<div class="header">
+  <h2>帳本</h2>
+  <button class="add" onclick="openForm()">+</button>
 </div>
 
-<button class="add" onclick="newItem()">＋</button>
+<div id="list"></div>
+
+<div id="form">
+  <h3>編輯商品</h3>
+  <input id="f-brand" placeholder="品牌">
+  <input id="f-name" placeholder="商品名稱">
+  <input id="f-cost" placeholder="成本">
+  <input id="f-sell" placeholder="售價">
+  <button class="save" onclick="save()">儲存</button>
+</div>
 
 <script>
-const KEY = "APP_B_ITEMS";
-let editIndex = null;
-
-function getItems() {
-  return JSON.parse(localStorage.getItem(KEY) || "[]");
-}
-function setItems(items) {
-  localStorage.setItem(KEY, JSON.stringify(items));
-}
+let inventory = window.parent.SharedStore.get("myStocks");
+let editingIndex = null;
 
 function render() {
   const list = document.getElementById("list");
-  const items = getItems();
   list.innerHTML = "";
 
-  if (items.length === 0) {
-    list.innerHTML = "<p style='color:#888'>尚無商品</p>";
-    return;
-  }
-
-  items.forEach((i, idx) => {
+  inventory.forEach((item, i) => {
     const div = document.createElement("div");
     div.className = "item";
-  div.addEventListener("click", () => load(idx));
-  div.style.cursor = "pointer";
-  div.style.pointerEvents = "auto";
     div.innerHTML = `
-      <b>${i.brand || "（未命名）"}</b><br>
-      ${i.name || ""}<br>
-      <small>$${i.price}｜匯率 ${i.rate}</small>
+      <b>${item.brand || "未命名"}</b><br>
+      ${item.name || "點擊編輯"}<br>
+      售價：$${item.sell || "-"}
     `;
+    div.onclick = () => openForm(i);
     list.appendChild(div);
   });
 }
 
+function openForm(i = null) {
+  editingIndex = i;
+  document.getElementById("form").style.display = "block";
+
+  if (i !== null) {
+    const d = inventory[i];
+    f-brand.value = d.brand;
+    f-name.value = d.name;
+    f-cost.value = d.cost;
+    f-sell.value = d.sell;
+  } else {
+    f-brand.value = "";
+    f-name.value = "";
+    f-cost.value = "";
+    f-sell.value = "";
+  }
+}
+
 function save() {
-  const items = getItems();
   const data = {
-    brand: brand.value,
-    name: name.value,
-    price: price.value,
-    rate: rate.value
+    brand: f-brand.value,
+    name: f-name.value,
+    cost: f-cost.value,
+    sell: f-sell.value
   };
 
-  if (editIndex === null) {
-    items.push(data);
-  } else {
-    items[editIndex] = data;
-  }
+  if (editingIndex !== null) inventory[editingIndex] = data;
+  else inventory.push(data);
 
-  setItems(items);
-  newItem();
-  render();
+  window.parent.SharedStore.set("myStocks", inventory);
+  document.getElementById("form").style.display = "none";
 }
 
-function load(index) {
-  const item = getItems()[index];
-  editIndex = index;
-
-  brand.value = item.brand;
-  name.value = item.name;
-  price.value = item.price;
-  rate.value = item.rate;
-
-  deleteBtn.style.display = "block";
-}
-
-function remove() {
-  if (editIndex === null) return;
-  const items = getItems();
-  items.splice(editIndex, 1);
-  setItems(items);
-  newItem();
-  render();
-}
-
-function newItem() {
-  brand.value = "";
-  name.value = "";
-  price.value = "";
-  rate.value = "";
-  editIndex = null;
-  deleteBtn.style.display = "none";
-}
-
-/* 🔁 接收 App A 即時匯入 */
-window.addEventListener("message", e => {
-  if (e.data?.type === "IMPORT_FROM_A") {
-    const items = getItems();
-    items.push(e.data.payload);
-    setItems(items);
+window.addEventListener("shared-update", (e) => {
+  if (e.detail.key === "myStocks") {
+    inventory = e.detail.value;
     render();
   }
 });
 
 render();
 </script>
+
 </body>
 </html>
