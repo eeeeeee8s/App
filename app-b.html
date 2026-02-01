@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>匯率計算</title>
+<title>帳本</title>
 
 <style>
 body {
@@ -19,6 +19,7 @@ body {
   background: #111;
   border-radius: 16px;
   padding: 16px;
+  margin-bottom: 16px;
 }
 input {
   width: 100%;
@@ -34,62 +35,127 @@ button {
   padding: 14px;
   border-radius: 12px;
   border: none;
-  font-size: 16px;
-}
-.calc {
-  background: #0a84ff;
-  color: #fff;
-  margin-bottom: 10px;
 }
 .save {
   background: #30d158;
   color: #000;
   font-weight: bold;
 }
+.item {
+  padding: 12px;
+  border-bottom: 1px solid #333;
+}
+.item button {
+  margin-top: 6px;
+  background: #0a84ff;
+  color: #fff;
+}
+.fab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #0a84ff;
+  color: #fff;
+  font-size: 32px;
+  border: none;
+}
 </style>
 </head>
 
 <body>
 <div class="container">
-  <h2>💰 匯率計算</h2>
+  <h2>📦 帳本</h2>
 
   <div class="card">
-    <input id="price" placeholder="外幣價格" />
+    <input id="brand" placeholder="品牌" />
+    <input id="name" placeholder="商品名稱" />
+    <input id="price" placeholder="售價 (HKD)" />
     <input id="rate" placeholder="匯率" />
-    <input id="result" placeholder="HKD" disabled />
+    <button class="save" onclick="save()">儲存商品</button>
+  </div>
 
-    <button class="calc" onclick="calculate()">計算</button>
-    <button class="save" onclick="importToLedger()">＋ 匯入帳本</button>
+  <div class="card">
+    <h3>商品列表</h3>
+    <div id="list"></div>
   </div>
 </div>
 
+<button class="fab" onclick="newItem()">＋</button>
+
 <script>
-function calculate() {
-  const price = parseFloat(priceInput.value);
-  const rate = parseFloat(rateInput.value);
-  if (!isNaN(price) && !isNaN(rate)) {
-    resultInput.value = (price * rate).toFixed(2);
-  }
+let editIndex = null;
+
+function load() {
+  return JSON.parse(localStorage.getItem("myStocks") || "[]");
 }
 
-function importToLedger() {
+function render() {
+  const list = document.getElementById("list");
+  const items = load();
+  list.innerHTML = "";
+
+  if (items.length === 0) {
+    list.innerHTML = "<div style='color:#888'>尚無商品</div>";
+    return;
+  }
+
+  items.forEach((item, i) => {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML = `
+      <strong>${item.name || "未命名"}</strong><br>
+      HKD ${item.price || "-"} ｜ 匯率 ${item.rate || "-"}
+      <button onclick="edit(${i})">編輯</button>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function save() {
+  const items = load();
   const item = {
-    brand: "",
-    name: "",
-    price: resultInput.value,
-    rate: rateInput.value
+    brand: brand.value,
+    name: name.value,
+    price: price.value,
+    rate: rate.value
   };
 
-  const list = JSON.parse(localStorage.getItem("myStocks") || "[]");
-  list.push(item);
-  localStorage.setItem("myStocks", JSON.stringify(list));
+  if (editIndex !== null) {
+    items[editIndex] = item;
+  } else {
+    items.push(item);
+  }
 
-  alert("已匯入帳本");
+  localStorage.setItem("myStocks", JSON.stringify(items));
+  clearForm();
+  render();
 }
 
-const priceInput = document.getElementById("price");
-const rateInput = document.getElementById("rate");
-const resultInput = document.getElementById("result");
+function edit(i) {
+  const item = load()[i];
+  editIndex = i;
+  brand.value = item.brand;
+  name.value = item.name;
+  price.value = item.price;
+  rate.value = item.rate;
+}
+
+function newItem() {
+  clearForm();
+}
+
+function clearForm() {
+  brand.value = "";
+  name.value = "";
+  price.value = "";
+  rate.value = "";
+  editIndex = null;
+}
+
+render();
 </script>
 </body>
 </html>
