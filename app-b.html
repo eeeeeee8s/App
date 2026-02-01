@@ -6,87 +6,154 @@
 <title>帳本（App B）</title>
 
 <style>
-body{background:#000;color:#fff;font-family:-apple-system,sans-serif;margin:0;padding:15px}
-.card{background:#111;border-radius:16px;padding:20px;margin-bottom:15px}
-input{width:100%;padding:14px;margin-bottom:10px;border-radius:12px;border:1px solid #333;background:#000;color:#fff}
-button{padding:14px;border-radius:12px;border:none;font-weight:bold}
-.add{background:#32d74b;color:#000}
-.item{padding:12px;border-bottom:1px solid #222;cursor:pointer}
-.item:active{background:#222}
-.fab{position:fixed;right:20px;bottom:20px;width:56px;height:56px;border-radius:50%;background:#0a84ff;color:#fff;font-size:32px;border:none}
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #000;
+  color: #fff;
+  padding: 16px;
+}
+
+.card {
+  background: #1c1c1e;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid #333;
+}
+
+input {
+  width: 100%;
+  background: #2c2c2e;
+  border: 1px solid #3a3a3c;
+  border-radius: 12px;
+  padding: 14px;
+  color: #fff;
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.save {
+  background: #32d74b;
+  color: #000;
+}
+
+.list-item {
+  padding: 12px;
+  border-bottom: 1px solid #333;
+  cursor: pointer;
+}
 </style>
 </head>
 
 <body>
 
-<h1>📦 帳本</h1>
+<h2>📦 帳本（App B）</h2>
 
 <div class="card">
   <input id="brand" placeholder="品牌">
   <input id="name" placeholder="商品名稱">
-  <input id="sell" placeholder="售價 (HKD)">
-  <input id="note" placeholder="來源 / 備註">
-  <button class="add" onclick="save()">儲存</button>
+  <input id="price" placeholder="售價 (HKD)" type="number">
+  <input id="rate" placeholder="匯率" type="number">
+  <button class="save" onclick="saveItem()">儲存商品</button>
 </div>
 
 <div class="card">
-  <div id="list">尚無商品</div>
+  <h3>商品列表</h3>
+  <div id="list"></div>
 </div>
 
-<button class="fab" onclick="newItem()">＋</button>
-
 <script>
-const KEY="myStocks_simple";
-let items=JSON.parse(localStorage.getItem(KEY)||"[]");
-let editing=null;
+/* =============================
+   1️⃣ 讀取 A 傳來的匯率資料
+============================= */
+const imported = JSON.parse(localStorage.getItem('fromAppA'));
 
-function render(){
-  const l=document.getElementById("list");
-  if(items.length===0){l.innerText="尚無商品";return;}
-  l.innerHTML="";
-  items.forEach((i,idx)=>{
-    const d=document.createElement("div");
-    d.className="item";
-    d.innerHTML=`<b>${i.name}</b><br><small>${i.brand}｜$${i.sell}</small>`;
-    d.onclick=()=>edit(idx);
-    l.appendChild(d);
+if (imported) {
+  document.getElementById('price').value = imported.hkd || "";
+  document.getElementById('rate').value = imported.rate || "";
+}
+
+/* =============================
+   2️⃣ 帳本資料
+============================= */
+let items = JSON.parse(localStorage.getItem('bookItems')) || [];
+let editingIndex = null;
+
+/* =============================
+   3️⃣ 儲存 / 編輯
+============================= */
+function saveItem() {
+  const data = {
+    brand: brand.value || "未命名",
+    name: name.value || "未命名",
+    price: price.value,
+    rate: rate.value
+  };
+
+  if (editingIndex !== null) {
+    items[editingIndex] = data;
+    editingIndex = null;
+  } else {
+    items.push(data);
+  }
+
+  localStorage.setItem('bookItems', JSON.stringify(items));
+  clearForm();
+  render();
+}
+
+/* =============================
+   4️⃣ 點擊編輯
+============================= */
+function editItem(index) {
+  const d = items[index];
+  brand.value = d.brand;
+  name.value = d.name;
+  price.value = d.price;
+  rate.value = d.rate;
+  editingIndex = index;
+}
+
+/* =============================
+   5️⃣ UI
+============================= */
+function render() {
+  const list = document.getElementById('list');
+  list.innerHTML = "";
+
+  if (items.length === 0) {
+    list.innerHTML = "<div style='color:#888'>尚無商品</div>";
+    return;
+  }
+
+  items.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = "list-item";
+    div.innerHTML = `
+      <b>${item.brand} ${item.name}</b><br>
+      HKD ${item.price} ｜ 匯率 ${item.rate}
+    `;
+    div.onclick = () => editItem(i);
+    list.appendChild(div);
   });
 }
 
-function newItem(){
-  editing=null;
-  brand.value=name.value=sell.value=note.value="";
-}
-
-function edit(i){
-  editing=i;
-  const d=items[i];
-  brand.value=d.brand;
-  name.value=d.name;
-  sell.value=d.sell;
-  note.value=d.note||"";
-}
-
-function save(){
-  const d={
-    brand:brand.value,
-    name:name.value,
-    sell:sell.value,
-    note:note.value
-  };
-  if(editing!==null) items[editing]=d;
-  else items.push(d);
-  localStorage.setItem(KEY,JSON.stringify(items));
-  newItem();render();
-}
-
-/* 🔗 接收 A 的匯入（只跑一次） */
-const pending=localStorage.getItem("pendingImport");
-if(pending){
-  const p=JSON.parse(pending);
-  note.value=`${p.country}｜${p.originText}｜匯率 ${p.rate}`;
-  sell.value=p.sellPrice;
-  localStorage.removeItem("pendingImport");
+function clearForm() {
+  brand.value = "";
+  name.value = "";
+  price.value = "";
+  rate.value = "";
 }
 
 render();
