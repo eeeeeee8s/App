@@ -3,22 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>帳本</title>
-
-  <script src="shared.js"></script>
+  <title>帳本（App B）</title>
 
   <style>
     body {
       margin: 0;
       background: #000;
       color: #fff;
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .container {
+      max-width: 420px;
+      margin: 0 auto;
       padding: 20px;
     }
 
     h1 {
-      font-size: 26px;
-      margin-bottom: 16px;
+      font-size: 22px;
+      margin-bottom: 10px;
+    }
+
+    #modeText {
+      font-size: 14px;
+      color: #aaa;
+      margin-bottom: 15px;
     }
 
     .card {
@@ -32,42 +41,46 @@
       width: 100%;
       padding: 14px;
       margin-bottom: 10px;
-      border-radius: 10px;
-      border: none;
-      background: #1c1c1c;
+      border-radius: 12px;
+      border: 1px solid #333;
+      background: #000;
       color: #fff;
-      font-size: 16px;
+      font-size: 15px;
+      box-sizing: border-box;
     }
 
     button {
       width: 100%;
       padding: 14px;
-      border-radius: 12px;
+      border-radius: 14px;
       border: none;
       font-size: 16px;
-      font-weight: 600;
+      font-weight: bold;
     }
 
     .save {
       background: #30d158;
       color: #000;
-      margin-top: 10px;
     }
 
-    .list {
-      margin-top: 10px;
+    .list-title {
+      font-weight: bold;
+      margin-bottom: 10px;
     }
 
     .item {
-      background: #1a1a1a;
       padding: 12px;
-      border-radius: 12px;
-      margin-bottom: 10px;
+      border-bottom: 1px solid #222;
       cursor: pointer;
     }
 
-    .item small {
-      color: #aaa;
+    .item:active {
+      background: #222;
+    }
+
+    .muted {
+      color: #777;
+      font-size: 14px;
     }
 
     .fab {
@@ -82,101 +95,113 @@
       font-size: 32px;
       border: none;
     }
-
-    .hidden {
-      display: none;
-    }
   </style>
 </head>
+
 <body>
+  <div class="container">
+    <h1>📦 帳本</h1>
+    <div id="modeText">新增商品</div>
 
-  <h1>📦 帳本</h1>
+    <!-- 表單 -->
+    <div class="card">
+      <input id="brand" placeholder="品牌">
+      <input id="name" placeholder="商品名稱">
+      <input id="price" placeholder="售價 (HKD)" type="number">
+      <input id="rate" placeholder="匯率" type="number" step="0.01">
+      <button class="save" onclick="saveItem()">儲存商品</button>
+    </div>
 
-  <!-- 表單 -->
-  <div class="card" id="formCard">
-    <input id="brand" placeholder="品牌">
-    <input id="name" placeholder="商品名稱">
-    <input id="price" placeholder="售價 (HKD)" type="number">
-    <input id="rate" placeholder="匯率" type="number">
-    <button class="save" onclick="saveItem()">儲存商品</button>
+    <!-- 列表 -->
+    <div class="card">
+      <div class="list-title">商品列表</div>
+      <div id="list" class="muted">尚無商品</div>
+    </div>
   </div>
 
-  <!-- 列表 -->
-  <div class="card">
-    <h2>商品列表</h2>
-    <div id="list" class="list">尚無商品</div>
-  </div>
-
-  <!-- ＋ -->
-  <button class="fab" onclick="newItem()">+</button>
+  <!-- ＋ 新增 -->
+  <button class="fab" onclick="newItem()">＋</button>
 
 <script>
+  const STORAGE_KEY = "appB_items";
+  let items = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
   let editingId = null;
 
-  function getItems() {
-    return Shared.getItems();
-  }
+  const brandInput = document.getElementById("brand");
+  const nameInput = document.getElementById("name");
+  const priceInput = document.getElementById("price");
+  const rateInput  = document.getElementById("rate");
+  const modeText   = document.getElementById("modeText");
+  const listEl     = document.getElementById("list");
 
-  function render() {
-    const list = document.getElementById("list");
-    const items = getItems();
-
+  function renderList() {
     if (items.length === 0) {
-      list.innerHTML = "尚無商品";
+      listEl.innerHTML = "尚無商品";
+      listEl.className = "muted";
       return;
     }
 
-    list.innerHTML = "";
+    listEl.className = "";
+    listEl.innerHTML = "";
+
     items.forEach(item => {
       const div = document.createElement("div");
       div.className = "item";
       div.innerHTML = `
-        <strong>${item.name || "未命名"}</strong><br>
-        <small>${item.brand || "-"} ｜ HKD ${item.price} ｜ 匯率 ${item.rate}</small>
+        <div><strong>${item.name || "未命名"}</strong></div>
+        <div class="muted">
+          ${item.brand || "-"} ｜ HKD ${item.price || "-"} ｜ 匯率 ${item.rate || "-"}
+        </div>
       `;
       div.onclick = () => editItem(item.id);
-      list.appendChild(div);
+      listEl.appendChild(div);
     });
   }
 
   function newItem() {
     editingId = null;
-    document.getElementById("brand").value = "";
-    document.getElementById("name").value = "";
-    document.getElementById("price").value = "";
-    document.getElementById("rate").value = "";
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    brandInput.value = "";
+    nameInput.value = "";
+    priceInput.value = "";
+    rateInput.value = "";
+    modeText.innerText = "新增商品";
   }
 
   function editItem(id) {
-    const item = getItems().find(i => i.id === id);
+    const item = items.find(i => i.id === id);
     if (!item) return;
 
     editingId = id;
-    document.getElementById("brand").value = item.brand;
-    document.getElementById("name").value = item.name;
-    document.getElementById("price").value = item.price;
-    document.getElementById("rate").value = item.rate;
+    brandInput.value = item.brand;
+    nameInput.value = item.name;
+    priceInput.value = item.price;
+    rateInput.value  = item.rate;
+    modeText.innerText = "編輯商品";
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function saveItem() {
-    const item = {
+    const data = {
       id: editingId || Date.now(),
-      brand: document.getElementById("brand").value,
-      name: document.getElementById("name").value,
-      price: document.getElementById("price").value,
-      rate: document.getElementById("rate").value
+      brand: brandInput.value.trim(),
+      name:  nameInput.value.trim(),
+      price: priceInput.value,
+      rate:  rateInput.value
     };
 
-    Shared.saveItem(item);
-    editingId = null;
-    render();
+    if (editingId) {
+      items = items.map(i => i.id === editingId ? data : i);
+    } else {
+      items.push(data);
+    }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
     newItem();
+    renderList();
+    alert("已儲存");
   }
 
-  render();
+  renderList();
 </script>
-
 </body>
 </html>
