@@ -6,157 +6,194 @@
 <title>帳本（App B）</title>
 
 <style>
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  background: #000;
-  color: #fff;
-  padding: 16px;
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont;
+  background:#000;
+  color:#fff;
+  padding:16px;
 }
-
-.card {
-  background: #1c1c1e;
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 16px;
-  border: 1px solid #333;
+h2{margin:12px 0;}
+.card{
+  background:#1c1c1e;
+  border-radius:16px;
+  padding:16px;
+  border:1px solid #333;
+  margin-bottom:16px;
 }
-
-input {
-  width: 100%;
-  background: #2c2c2e;
-  border: 1px solid #3a3a3c;
-  border-radius: 12px;
-  padding: 14px;
-  color: #fff;
-  font-size: 16px;
-  margin-bottom: 12px;
+.draft{
+  border:1px dashed #555;
+  margin-bottom:10px;
 }
-
-button {
-  width: 100%;
-  padding: 14px;
-  border-radius: 14px;
-  border: none;
-  font-size: 16px;
-  font-weight: bold;
-  cursor: pointer;
+.btn{
+  padding:10px 14px;
+  border-radius:12px;
+  border:none;
+  font-weight:bold;
+  cursor:pointer;
 }
-
-.save {
-  background: #32d74b;
-  color: #000;
+.btn-blue{background:#0a84ff;color:#fff;}
+.btn-green{background:#32d74b;color:#000;}
+.list-item{
+  padding:12px;
+  border-bottom:1px solid #333;
+  cursor:pointer;
 }
-
-.list-item {
-  padding: 12px;
-  border-bottom: 1px solid #333;
-  cursor: pointer;
+input{
+  width:100%;
+  background:#2c2c2e;
+  border:1px solid #3a3a3c;
+  color:#fff;
+  padding:12px;
+  border-radius:12px;
+  margin-bottom:10px;
+  font-size:16px;
+}
+.overlay{
+  position:fixed;
+  top:0;left:0;right:0;bottom:0;
+  background:#000;
+  padding:16px;
+  display:none;
+  z-index:999;
 }
 </style>
 </head>
 
 <body>
 
-<h2>📦 帳本（App B）</h2>
+<h2>🔁 來自匯率的暫存項目</h2>
+<div id="draftList"></div>
 
-<div class="card">
+<h2>📦 帳本商品</h2>
+<div id="stockList"></div>
+
+<!-- 編輯表單 -->
+<div class="overlay" id="form">
+  <h3 id="formTitle">編輯商品</h3>
   <input id="brand" placeholder="品牌">
   <input id="name" placeholder="商品名稱">
-  <input id="price" placeholder="售價 (HKD)" type="number">
+  <input id="price" placeholder="HKD 成本" type="number">
   <input id="rate" placeholder="匯率" type="number">
-  <button class="save" onclick="saveItem()">儲存商品</button>
-</div>
-
-<div class="card">
-  <h3>商品列表</h3>
-  <div id="list"></div>
+  <button class="btn btn-green" onclick="saveItem()">儲存</button>
+  <button class="btn btn-blue" onclick="closeForm()">取消</button>
 </div>
 
 <script>
-/* =============================
-   1️⃣ 讀取 A 傳來的匯率資料
-============================= */
-const imported = JSON.parse(localStorage.getItem('fromAppA'));
-
-if (imported) {
-  document.getElementById('price').value = imported.hkd || "";
-  document.getElementById('rate').value = imported.rate || "";
-}
-
-/* =============================
-   2️⃣ 帳本資料
-============================= */
-let items = JSON.parse(localStorage.getItem('bookItems')) || [];
+let drafts = JSON.parse(localStorage.getItem("sharedDrafts") || "[]");
+let stocks = JSON.parse(localStorage.getItem("myStocks") || "[]");
 let editingIndex = null;
 
-/* =============================
-   3️⃣ 儲存 / 編輯
-============================= */
-function saveItem() {
-  const data = {
-    brand: brand.value || "未命名",
-    name: name.value || "未命名",
-    price: price.value,
-    rate: rate.value
-  };
+/* ========= 暫存卡片 ========= */
+function renderDrafts(){
+  const box = document.getElementById("draftList");
+  box.innerHTML = "";
 
-  if (editingIndex !== null) {
-    items[editingIndex] = data;
-    editingIndex = null;
-  } else {
-    items.push(data);
-  }
-
-  localStorage.setItem('bookItems', JSON.stringify(items));
-  clearForm();
-  render();
-}
-
-/* =============================
-   4️⃣ 點擊編輯
-============================= */
-function editItem(index) {
-  const d = items[index];
-  brand.value = d.brand;
-  name.value = d.name;
-  price.value = d.price;
-  rate.value = d.rate;
-  editingIndex = index;
-}
-
-/* =============================
-   5️⃣ UI
-============================= */
-function render() {
-  const list = document.getElementById('list');
-  list.innerHTML = "";
-
-  if (items.length === 0) {
-    list.innerHTML = "<div style='color:#888'>尚無商品</div>";
+  if(drafts.length===0){
+    box.innerHTML = "<div style='color:#888'>尚無暫存</div>";
     return;
   }
 
-  items.forEach((item, i) => {
-    const div = document.createElement('div');
-    div.className = "list-item";
+  drafts.forEach((d,i)=>{
+    const div = document.createElement("div");
+    div.className="card draft";
     div.innerHTML = `
-      <b>${item.brand} ${item.name}</b><br>
-      HKD ${item.price} ｜ 匯率 ${item.rate}
+      <b>未命名</b><br>
+      HKD ${d.hkdCost} ｜ 匯率 ${d.rate}
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button class="btn btn-green">匯入帳本</button>
+      </div>
     `;
-    div.onclick = () => editItem(i);
-    list.appendChild(div);
+    div.querySelector("button").onclick=()=>importDraft(i);
+    div.onclick=()=>openFormFromDraft(i);
+    box.appendChild(div);
   });
 }
 
-function clearForm() {
-  brand.value = "";
-  name.value = "";
-  price.value = "";
-  rate.value = "";
+/* ========= 匯入帳本 ========= */
+function importDraft(index){
+  const d = drafts[index];
+  stocks.push({
+    brand:"",
+    name:"未命名",
+    price:d.hkdCost,
+    rate:d.rate
+  });
+  drafts.splice(index,1);
+  sync();
 }
 
-render();
+/* ========= 正式帳本 ========= */
+function renderStocks(){
+  const box=document.getElementById("stockList");
+  box.innerHTML="";
+  if(stocks.length===0){
+    box.innerHTML="<div style='color:#888'>尚無商品</div>";
+    return;
+  }
+  stocks.forEach((s,i)=>{
+    const div=document.createElement("div");
+    div.className="list-item";
+    div.innerHTML=`<b>${s.brand||"未命名"} ${s.name||""}</b><br>HKD ${s.price}`;
+    div.onclick=()=>openFormFromStock(i);
+    box.appendChild(div);
+  });
+}
+
+/* ========= 表單 ========= */
+function openFormFromDraft(i){
+  const d=drafts[i];
+  editingIndex={type:"draft",i};
+  formTitle.innerText="編輯（來自匯率）";
+  brand.value="";
+  name.value="未命名";
+  price.value=d.hkdCost;
+  rate.value=d.rate;
+  form.style.display="block";
+}
+
+function openFormFromStock(i){
+  const s=stocks[i];
+  editingIndex={type:"stock",i};
+  formTitle.innerText="編輯商品";
+  brand.value=s.brand;
+  name.value=s.name;
+  price.value=s.price;
+  rate.value=s.rate;
+  form.style.display="block";
+}
+
+function saveItem(){
+  const data={
+    brand:brand.value,
+    name:name.value,
+    price:price.value,
+    rate:rate.value
+  };
+  if(editingIndex.type==="draft"){
+    stocks.push(data);
+    drafts.splice(editingIndex.i,1);
+  }else{
+    stocks[editingIndex.i]=data;
+  }
+  sync();
+  closeForm();
+}
+
+function closeForm(){
+  form.style.display="none";
+}
+
+/* ========= 同步 ========= */
+function sync(){
+  localStorage.setItem("sharedDrafts",JSON.stringify(drafts));
+  localStorage.setItem("myStocks",JSON.stringify(stocks));
+  renderDrafts();
+  renderStocks();
+}
+
+renderDrafts();
+renderStocks();
 </script>
 
 </body>
