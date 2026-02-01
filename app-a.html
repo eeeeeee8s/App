@@ -3,74 +3,55 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>匯率計算</title>
+<title>匯率計算（App A）</title>
 
 <style>
-body {
-  margin: 0;
-  padding: 20px;
-  background: #000;
-  color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+body{
+  background:#000;color:#fff;
+  font-family:-apple-system,sans-serif;
+  padding:20px
 }
-
-.card {
-  background: #111;
-  border: 1px solid #333;
-  border-radius: 16px;
-  padding: 20px;
+.card{
+  background:#111;border-radius:16px;
+  padding:20px;margin-bottom:20px
 }
-
-input {
-  width: 100%;
-  padding: 14px;
-  font-size: 20px;
-  border-radius: 12px;
-  border: none;
-  background: #222;
-  color: #fff;
-  margin-bottom: 12px;
+input{
+  width:100%;padding:14px;
+  border-radius:12px;border:1px solid #333;
+  background:#000;color:#fff;font-size:16px
 }
-
-button {
-  width: 100%;
-  padding: 14px;
-  border-radius: 12px;
-  border: none;
-  background: #32d74b;
-  color: #000;
-  font-weight: bold;
-  font-size: 16px;
+button{
+  width:100%;padding:16px;
+  border-radius:14px;border:none;
+  background:#32d74b;color:#000;
+  font-weight:bold;font-size:16px
 }
 </style>
 </head>
 
 <body>
 
+<h1>💱 匯率計算</h1>
+
 <div class="card">
-  <h2>匯率計算</h2>
-
-  <input id="input1" placeholder="進貨成本">
-  <input id="input2" placeholder="售價">
-
-  <button onclick="importToB()">➡️ 匯入帳本</button>
+  <input id="originPrice" placeholder="當地價格（例如 12000）" type="number">
+  <input id="rate" placeholder="匯率（例如 0.052）" type="number" step="0.001">
+  <input id="sell" placeholder="你要賣的價格（HKD）" type="number">
 </div>
 
+<button onclick="importToB()">➡️ 匯入到帳本</button>
+
 <script>
-function importToB() {
-  const item = {
-    id: Date.now(),
-    brand: "",
-    name: "",
-    cost: document.getElementById("input1").value,
-    sell: document.getElementById("input2").value
+function importToB(){
+  const data = {
+    country: "🇯🇵",
+    originText: document.getElementById('originPrice').value + " JPY",
+    rate: document.getElementById('rate').value,
+    sellPrice: document.getElementById('sell').value
   };
 
-  const list = window.parent.SharedStore.get("myStocks");
-  list.push(item);
-  window.parent.SharedStore.set("myStocks", list);
-
-  alert("✅ 已匯入帳本");
+  localStorage.setItem("pendingImport", JSON.stringify(data));
+  window.location.href = "app-b.html";
 }
 </script>
 
