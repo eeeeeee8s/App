@@ -6,52 +6,121 @@
 <title>匯率計算（App A）</title>
 
 <style>
+:root {
+  --blue:#0a84ff;
+  --green:#32d74b;
+  --card:#1c1c1e;
+  --input:#2c2c2e;
+  --gray:#8e8e93;
+}
 body{
-  background:#000;color:#fff;
-  font-family:-apple-system,sans-serif;
-  padding:20px
+  margin:0;
+  background:#000;
+  color:#fff;
+  font-family:-apple-system,BlinkMacSystemFont;
+  padding:16px;
 }
+h1{font-size:22px;margin-bottom:12px;}
 .card{
-  background:#111;border-radius:16px;
-  padding:20px;margin-bottom:20px
+  background:var(--card);
+  border-radius:18px;
+  padding:16px;
+  border:1px solid #333;
 }
-input{
-  width:100%;padding:14px;
-  border-radius:12px;border:1px solid #333;
-  background:#000;color:#fff;font-size:16px
+.input{
+  width:100%;
+  background:var(--input);
+  border:1px solid #3a3a3c;
+  color:#fff;
+  padding:14px;
+  border-radius:12px;
+  font-size:16px;
+  margin-bottom:10px;
 }
-button{
-  width:100%;padding:16px;
-  border-radius:14px;border:none;
-  background:#32d74b;color:#000;
-  font-weight:bold;font-size:16px
+.btn{
+  width:100%;
+  padding:14px;
+  border-radius:14px;
+  border:none;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+}
+.btn-blue{background:var(--blue);color:#fff;}
+.btn-green{background:var(--green);color:#000;margin-top:10px;}
+.result{
+  margin-top:12px;
+  font-size:18px;
+  font-weight:bold;
+  text-align:center;
+}
+.toast{
+  position:fixed;
+  bottom:30px;
+  left:50%;
+  transform:translateX(-50%);
+  background:#1c1c1e;
+  padding:14px 20px;
+  border-radius:16px;
+  border:1px solid #333;
+  display:none;
 }
 </style>
 </head>
 
 <body>
 
-<h1>💱 匯率計算</h1>
+<h1>💱 匯率計算（App A）</h1>
 
 <div class="card">
-  <input id="originPrice" placeholder="當地價格（例如 12000）" type="number">
-  <input id="rate" placeholder="匯率（例如 0.052）" type="number" step="0.001">
-  <input id="sell" placeholder="你要賣的價格（HKD）" type="number">
+  <input id="originPrice" class="input" type="number" placeholder="外幣價格">
+  <input id="rate" class="input" type="number" step="0.0001" placeholder="匯率">
+  <input id="hkdResult" class="input" placeholder="HKD" readonly>
+
+  <button class="btn btn-blue" onclick="calculate()">計算</button>
+  <button class="btn btn-green" onclick="addToShared()">＋ 加入暫存（不跳頁）</button>
 </div>
 
-<button onclick="importToB()">➡️ 匯入到帳本</button>
+<div class="toast" id="toast">✅ 已加入暫存池</div>
 
 <script>
-function importToB(){
-  const data = {
-    country: "🇯🇵",
-    originText: document.getElementById('originPrice').value + " JPY",
-    rate: document.getElementById('rate').value,
-    sellPrice: document.getElementById('sell').value
-  };
+function calculate(){
+  const price = parseFloat(originPrice.value);
+  const rateVal = parseFloat(rate.value);
+  if(isNaN(price)||isNaN(rateVal)) return;
+  hkdResult.value = (price * rateVal).toFixed(2);
+}
 
-  localStorage.setItem("pendingImport", JSON.stringify(data));
-  window.location.href = "app-b.html";
+/* ⭐ 核心：加入 sharedDrafts */
+function addToShared(){
+  const price = parseFloat(originPrice.value);
+  const rateVal = parseFloat(rate.value);
+  const hkd = parseFloat(hkdResult.value);
+
+  if(isNaN(price)||isNaN(rateVal)||isNaN(hkd)){
+    alert("請先完成計算");
+    return;
+  }
+
+  const drafts = JSON.parse(localStorage.getItem("sharedDrafts") || "[]");
+
+  drafts.push({
+    id: Date.now(),
+    source: "A",
+    originPrice: price,
+    rate: rateVal,
+    hkdCost: hkd,
+    createdAt: new Date().toISOString()
+  });
+
+  localStorage.setItem("sharedDrafts", JSON.stringify(drafts));
+  showToast();
+}
+
+function showToast(){
+  const t = document.getElementById("toast");
+  t.style.display="block";
+  setTimeout(()=>t.style.display="none",1500);
 }
 </script>
 
