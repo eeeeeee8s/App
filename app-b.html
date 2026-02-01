@@ -19,11 +19,13 @@ h2{margin:12px 0;}
   border-radius:16px;
   padding:16px;
   border:1px solid #333;
-  margin-bottom:16px;
+  margin-bottom:12px;
 }
-.draft{
+.draft-card{
   border:1px dashed #555;
-  margin-bottom:10px;
+}
+.card-main{
+  cursor:pointer;
 }
 .btn{
   padding:10px 14px;
@@ -32,7 +34,6 @@ h2{margin:12px 0;}
   font-weight:bold;
   cursor:pointer;
 }
-.btn-blue{background:#0a84ff;color:#fff;}
 .btn-green{background:#32d74b;color:#000;}
 .list-item{
   padding:12px;
@@ -51,11 +52,11 @@ input{
 }
 .overlay{
   position:fixed;
-  top:0;left:0;right:0;bottom:0;
+  inset:0;
   background:#000;
   padding:16px;
   display:none;
-  z-index:999;
+  z-index:9999;
 }
 </style>
 </head>
@@ -68,7 +69,6 @@ input{
 <h2>📦 帳本商品</h2>
 <div id="stockList"></div>
 
-<!-- 編輯表單 -->
 <div class="overlay" id="form">
   <h3 id="formTitle">編輯商品</h3>
   <input id="brand" placeholder="品牌">
@@ -76,118 +76,132 @@ input{
   <input id="price" placeholder="HKD 成本" type="number">
   <input id="rate" placeholder="匯率" type="number">
   <button class="btn btn-green" onclick="saveItem()">儲存</button>
-  <button class="btn btn-blue" onclick="closeForm()">取消</button>
+  <button class="btn" onclick="closeForm()">取消</button>
 </div>
 
 <script>
 let drafts = JSON.parse(localStorage.getItem("sharedDrafts") || "[]");
 let stocks = JSON.parse(localStorage.getItem("myStocks") || "[]");
-let editingIndex = null;
+let editing = null;
 
-/* ========= 暫存卡片 ========= */
+/* ---------- Drafts ---------- */
 function renderDrafts(){
   const box = document.getElementById("draftList");
   box.innerHTML = "";
 
-  if(drafts.length===0){
+  if(!drafts.length){
     box.innerHTML = "<div style='color:#888'>尚無暫存</div>";
     return;
   }
 
   drafts.forEach((d,i)=>{
-    const div = document.createElement("div");
-    div.className="card draft";
-    div.innerHTML = `
+    const card = document.createElement("div");
+    card.className = "card draft-card";
+
+    const main = document.createElement("div");
+    main.className = "card-main";
+    main.innerHTML = `
       <b>未命名</b><br>
       HKD ${d.hkdCost} ｜ 匯率 ${d.rate}
-      <div style="margin-top:10px;display:flex;gap:8px">
-        <button class="btn btn-green">匯入帳本</button>
-      </div>
     `;
-    div.querySelector("button").onclick=()=>importDraft(i);
-    div.onclick=()=>openFormFromDraft(i);
+    main.onclick = () => openFormFromDraft(i);
+
+    const btn = document.createElement("button");
+    btn.className = "btn btn-green";
+    btn.innerText = "匯入帳本";
+    btn.onclick = (e)=>{
+      e.stopPropagation();
+      importDraft(i);
+    };
+
+    card.appendChild(main);
+    card.appendChild(btn);
+    box.appendChild(card);
+  });
+}
+
+/* ---------- Stocks ---------- */
+function renderStocks(){
+  const box = document.getElementById("stockList");
+  box.innerHTML = "";
+
+  if(!stocks.length){
+    box.innerHTML = "<div style='color:#888'>尚無商品</div>";
+    return;
+  }
+
+  stocks.forEach((s,i)=>{
+    const div = document.createElement("div");
+    div.className = "list-item";
+    div.innerHTML = `<b>${s.brand || "未命名"} ${s.name || ""}</b><br>HKD ${s.price}`;
+    div.onclick = () => openFormFromStock(i);
     box.appendChild(div);
   });
 }
 
-/* ========= 匯入帳本 ========= */
-function importDraft(index){
-  const d = drafts[index];
+/* ---------- Form ---------- */
+function openFormFromDraft(i){
+  const d = drafts[i];
+  editing = {type:"draft",i};
+  formTitle.innerText = "編輯（來自匯率）";
+  brand.value = "";
+  name.value = "未命名";
+  price.value = d.hkdCost;
+  rate.value = d.rate;
+  form.style.display = "block";
+}
+
+function openFormFromStock(i){
+  const s = stocks[i];
+  editing = {type:"stock",i};
+  formTitle.innerText = "編輯商品";
+  brand.value = s.brand;
+  name.value = s.name;
+  price.value = s.price;
+  rate.value = s.rate;
+  form.style.display = "block";
+}
+
+function saveItem(){
+  const data = {
+    brand: brand.value,
+    name: name.value,
+    price: price.value,
+    rate: rate.value
+  };
+
+  if(editing.type === "draft"){
+    stocks.push(data);
+    drafts.splice(editing.i,1);
+  }else{
+    stocks[editing.i] = data;
+  }
+
+  sync();
+  closeForm();
+}
+
+function closeForm(){
+  form.style.display = "none";
+}
+
+/* ---------- Import ---------- */
+function importDraft(i){
+  const d = drafts[i];
   stocks.push({
     brand:"",
     name:"未命名",
     price:d.hkdCost,
     rate:d.rate
   });
-  drafts.splice(index,1);
+  drafts.splice(i,1);
   sync();
 }
 
-/* ========= 正式帳本 ========= */
-function renderStocks(){
-  const box=document.getElementById("stockList");
-  box.innerHTML="";
-  if(stocks.length===0){
-    box.innerHTML="<div style='color:#888'>尚無商品</div>";
-    return;
-  }
-  stocks.forEach((s,i)=>{
-    const div=document.createElement("div");
-    div.className="list-item";
-    div.innerHTML=`<b>${s.brand||"未命名"} ${s.name||""}</b><br>HKD ${s.price}`;
-    div.onclick=()=>openFormFromStock(i);
-    box.appendChild(div);
-  });
-}
-
-/* ========= 表單 ========= */
-function openFormFromDraft(i){
-  const d=drafts[i];
-  editingIndex={type:"draft",i};
-  formTitle.innerText="編輯（來自匯率）";
-  brand.value="";
-  name.value="未命名";
-  price.value=d.hkdCost;
-  rate.value=d.rate;
-  form.style.display="block";
-}
-
-function openFormFromStock(i){
-  const s=stocks[i];
-  editingIndex={type:"stock",i};
-  formTitle.innerText="編輯商品";
-  brand.value=s.brand;
-  name.value=s.name;
-  price.value=s.price;
-  rate.value=s.rate;
-  form.style.display="block";
-}
-
-function saveItem(){
-  const data={
-    brand:brand.value,
-    name:name.value,
-    price:price.value,
-    rate:rate.value
-  };
-  if(editingIndex.type==="draft"){
-    stocks.push(data);
-    drafts.splice(editingIndex.i,1);
-  }else{
-    stocks[editingIndex.i]=data;
-  }
-  sync();
-  closeForm();
-}
-
-function closeForm(){
-  form.style.display="none";
-}
-
-/* ========= 同步 ========= */
+/* ---------- Sync ---------- */
 function sync(){
-  localStorage.setItem("sharedDrafts",JSON.stringify(drafts));
-  localStorage.setItem("myStocks",JSON.stringify(stocks));
+  localStorage.setItem("sharedDrafts", JSON.stringify(drafts));
+  localStorage.setItem("myStocks", JSON.stringify(stocks));
   renderDrafts();
   renderStocks();
 }
