@@ -1,207 +1,96 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>帳本（App B）</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>帳本（App B）</title>
 
-  <style>
-    body {
-      margin: 0;
-      background: #000;
-      color: #fff;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-
-    .container {
-      max-width: 420px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-
-    h1 {
-      font-size: 22px;
-      margin-bottom: 10px;
-    }
-
-    #modeText {
-      font-size: 14px;
-      color: #aaa;
-      margin-bottom: 15px;
-    }
-
-    .card {
-      background: #111;
-      border-radius: 16px;
-      padding: 16px;
-      margin-bottom: 20px;
-    }
-
-    input {
-      width: 100%;
-      padding: 14px;
-      margin-bottom: 10px;
-      border-radius: 12px;
-      border: 1px solid #333;
-      background: #000;
-      color: #fff;
-      font-size: 15px;
-      box-sizing: border-box;
-    }
-
-    button {
-      width: 100%;
-      padding: 14px;
-      border-radius: 14px;
-      border: none;
-      font-size: 16px;
-      font-weight: bold;
-    }
-
-    .save {
-      background: #30d158;
-      color: #000;
-    }
-
-    .list-title {
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
-
-    .item {
-      padding: 12px;
-      border-bottom: 1px solid #222;
-      cursor: pointer;
-    }
-
-    .item:active {
-      background: #222;
-    }
-
-    .muted {
-      color: #777;
-      font-size: 14px;
-    }
-
-    .fab {
-      position: fixed;
-      right: 20px;
-      bottom: 20px;
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      background: #0a84ff;
-      color: #fff;
-      font-size: 32px;
-      border: none;
-    }
-  </style>
+<style>
+body{background:#000;color:#fff;font-family:-apple-system,sans-serif;margin:0;padding:15px}
+.card{background:#111;border-radius:16px;padding:20px;margin-bottom:15px}
+input{width:100%;padding:14px;margin-bottom:10px;border-radius:12px;border:1px solid #333;background:#000;color:#fff}
+button{padding:14px;border-radius:12px;border:none;font-weight:bold}
+.add{background:#32d74b;color:#000}
+.item{padding:12px;border-bottom:1px solid #222;cursor:pointer}
+.item:active{background:#222}
+.fab{position:fixed;right:20px;bottom:20px;width:56px;height:56px;border-radius:50%;background:#0a84ff;color:#fff;font-size:32px;border:none}
+</style>
 </head>
 
 <body>
-  <div class="container">
-    <h1>📦 帳本</h1>
-    <div id="modeText">新增商品</div>
 
-    <!-- 表單 -->
-    <div class="card">
-      <input id="brand" placeholder="品牌">
-      <input id="name" placeholder="商品名稱">
-      <input id="price" placeholder="售價 (HKD)" type="number">
-      <input id="rate" placeholder="匯率" type="number" step="0.01">
-      <button class="save" onclick="saveItem()">儲存商品</button>
-    </div>
+<h1>📦 帳本</h1>
 
-    <!-- 列表 -->
-    <div class="card">
-      <div class="list-title">商品列表</div>
-      <div id="list" class="muted">尚無商品</div>
-    </div>
-  </div>
+<div class="card">
+  <input id="brand" placeholder="品牌">
+  <input id="name" placeholder="商品名稱">
+  <input id="sell" placeholder="售價 (HKD)">
+  <input id="note" placeholder="來源 / 備註">
+  <button class="add" onclick="save()">儲存</button>
+</div>
 
-  <!-- ＋ 新增 -->
-  <button class="fab" onclick="newItem()">＋</button>
+<div class="card">
+  <div id="list">尚無商品</div>
+</div>
+
+<button class="fab" onclick="newItem()">＋</button>
 
 <script>
-  const STORAGE_KEY = "appB_items";
-  let items = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-  let editingId = null;
+const KEY="myStocks_simple";
+let items=JSON.parse(localStorage.getItem(KEY)||"[]");
+let editing=null;
 
-  const brandInput = document.getElementById("brand");
-  const nameInput = document.getElementById("name");
-  const priceInput = document.getElementById("price");
-  const rateInput  = document.getElementById("rate");
-  const modeText   = document.getElementById("modeText");
-  const listEl     = document.getElementById("list");
+function render(){
+  const l=document.getElementById("list");
+  if(items.length===0){l.innerText="尚無商品";return;}
+  l.innerHTML="";
+  items.forEach((i,idx)=>{
+    const d=document.createElement("div");
+    d.className="item";
+    d.innerHTML=`<b>${i.name}</b><br><small>${i.brand}｜$${i.sell}</small>`;
+    d.onclick=()=>edit(idx);
+    l.appendChild(d);
+  });
+}
 
-  function renderList() {
-    if (items.length === 0) {
-      listEl.innerHTML = "尚無商品";
-      listEl.className = "muted";
-      return;
-    }
+function newItem(){
+  editing=null;
+  brand.value=name.value=sell.value=note.value="";
+}
 
-    listEl.className = "";
-    listEl.innerHTML = "";
+function edit(i){
+  editing=i;
+  const d=items[i];
+  brand.value=d.brand;
+  name.value=d.name;
+  sell.value=d.sell;
+  note.value=d.note||"";
+}
 
-    items.forEach(item => {
-      const div = document.createElement("div");
-      div.className = "item";
-      div.innerHTML = `
-        <div><strong>${item.name || "未命名"}</strong></div>
-        <div class="muted">
-          ${item.brand || "-"} ｜ HKD ${item.price || "-"} ｜ 匯率 ${item.rate || "-"}
-        </div>
-      `;
-      div.onclick = () => editItem(item.id);
-      listEl.appendChild(div);
-    });
-  }
+function save(){
+  const d={
+    brand:brand.value,
+    name:name.value,
+    sell:sell.value,
+    note:note.value
+  };
+  if(editing!==null) items[editing]=d;
+  else items.push(d);
+  localStorage.setItem(KEY,JSON.stringify(items));
+  newItem();render();
+}
 
-  function newItem() {
-    editingId = null;
-    brandInput.value = "";
-    nameInput.value = "";
-    priceInput.value = "";
-    rateInput.value = "";
-    modeText.innerText = "新增商品";
-  }
+/* 🔗 接收 A 的匯入（只跑一次） */
+const pending=localStorage.getItem("pendingImport");
+if(pending){
+  const p=JSON.parse(pending);
+  note.value=`${p.country}｜${p.originText}｜匯率 ${p.rate}`;
+  sell.value=p.sellPrice;
+  localStorage.removeItem("pendingImport");
+}
 
-  function editItem(id) {
-    const item = items.find(i => i.id === id);
-    if (!item) return;
-
-    editingId = id;
-    brandInput.value = item.brand;
-    nameInput.value = item.name;
-    priceInput.value = item.price;
-    rateInput.value  = item.rate;
-    modeText.innerText = "編輯商品";
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function saveItem() {
-    const data = {
-      id: editingId || Date.now(),
-      brand: brandInput.value.trim(),
-      name:  nameInput.value.trim(),
-      price: priceInput.value,
-      rate:  rateInput.value
-    };
-
-    if (editingId) {
-      items = items.map(i => i.id === editingId ? data : i);
-    } else {
-      items.push(data);
-    }
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    newItem();
-    renderList();
-    alert("已儲存");
-  }
-
-  renderList();
+render();
 </script>
+
 </body>
 </html>
