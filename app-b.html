@@ -1,161 +1,182 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>帳本</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>帳本</title>
 
-<style>
-body {
-  margin: 0;
-  background: #000;
-  color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-}
-.container {
-  padding: 16px;
-}
-.card {
-  background: #111;
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-input {
-  width: 100%;
-  padding: 12px;
-  margin-bottom: 10px;
-  border-radius: 10px;
-  border: 1px solid #333;
-  background: #000;
-  color: #fff;
-}
-button {
-  width: 100%;
-  padding: 14px;
-  border-radius: 12px;
-  border: none;
-}
-.save {
-  background: #30d158;
-  color: #000;
-  font-weight: bold;
-}
-.item {
-  padding: 12px;
-  border-bottom: 1px solid #333;
-}
-.item button {
-  margin-top: 6px;
-  background: #0a84ff;
-  color: #fff;
-}
-.fab {
-  position: fixed;
-  right: 20px;
-  bottom: 20px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: #0a84ff;
-  color: #fff;
-  font-size: 32px;
-  border: none;
-}
-</style>
+  <script src="shared.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 26px;
+      margin-bottom: 16px;
+    }
+
+    .card {
+      background: #111;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      border: none;
+      background: #1c1c1c;
+      color: #fff;
+      font-size: 16px;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .save {
+      background: #30d158;
+      color: #000;
+      margin-top: 10px;
+    }
+
+    .list {
+      margin-top: 10px;
+    }
+
+    .item {
+      background: #1a1a1a;
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+
+    .item small {
+      color: #aaa;
+    }
+
+    .fab {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: #0a84ff;
+      color: #fff;
+      font-size: 32px;
+      border: none;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
 </head>
-
 <body>
-<div class="container">
-  <h2>📦 帳本</h2>
 
-  <div class="card">
-    <input id="brand" placeholder="品牌" />
-    <input id="name" placeholder="商品名稱" />
-    <input id="price" placeholder="售價 (HKD)" />
-    <input id="rate" placeholder="匯率" />
-    <button class="save" onclick="save()">儲存商品</button>
+  <h1>📦 帳本</h1>
+
+  <!-- 表單 -->
+  <div class="card" id="formCard">
+    <input id="brand" placeholder="品牌">
+    <input id="name" placeholder="商品名稱">
+    <input id="price" placeholder="售價 (HKD)" type="number">
+    <input id="rate" placeholder="匯率" type="number">
+    <button class="save" onclick="saveItem()">儲存商品</button>
   </div>
 
+  <!-- 列表 -->
   <div class="card">
-    <h3>商品列表</h3>
-    <div id="list"></div>
+    <h2>商品列表</h2>
+    <div id="list" class="list">尚無商品</div>
   </div>
-</div>
 
-<button class="fab" onclick="newItem()">＋</button>
+  <!-- ＋ -->
+  <button class="fab" onclick="newItem()">+</button>
 
 <script>
-let editIndex = null;
+  let editingId = null;
 
-function load() {
-  return JSON.parse(localStorage.getItem("myStocks") || "[]");
-}
-
-function render() {
-  const list = document.getElementById("list");
-  const items = load();
-  list.innerHTML = "";
-
-  if (items.length === 0) {
-    list.innerHTML = "<div style='color:#888'>尚無商品</div>";
-    return;
+  function getItems() {
+    return Shared.getItems();
   }
 
-  items.forEach((item, i) => {
-    const div = document.createElement("div");
-    div.className = "item";
-    div.innerHTML = `
-      <strong>${item.name || "未命名"}</strong><br>
-      HKD ${item.price || "-"} ｜ 匯率 ${item.rate || "-"}
-      <button onclick="edit(${i})">編輯</button>
-    `;
-    list.appendChild(div);
-  });
-}
+  function render() {
+    const list = document.getElementById("list");
+    const items = getItems();
 
-function save() {
-  const items = load();
-  const item = {
-    brand: brand.value,
-    name: name.value,
-    price: price.value,
-    rate: rate.value
-  };
+    if (items.length === 0) {
+      list.innerHTML = "尚無商品";
+      return;
+    }
 
-  if (editIndex !== null) {
-    items[editIndex] = item;
-  } else {
-    items.push(item);
+    list.innerHTML = "";
+    items.forEach(item => {
+      const div = document.createElement("div");
+      div.className = "item";
+      div.innerHTML = `
+        <strong>${item.name || "未命名"}</strong><br>
+        <small>${item.brand || "-"} ｜ HKD ${item.price} ｜ 匯率 ${item.rate}</small>
+      `;
+      div.onclick = () => editItem(item.id);
+      list.appendChild(div);
+    });
   }
 
-  localStorage.setItem("myStocks", JSON.stringify(items));
-  clearForm();
+  function newItem() {
+    editingId = null;
+    document.getElementById("brand").value = "";
+    document.getElementById("name").value = "";
+    document.getElementById("price").value = "";
+    document.getElementById("rate").value = "";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function editItem(id) {
+    const item = getItems().find(i => i.id === id);
+    if (!item) return;
+
+    editingId = id;
+    document.getElementById("brand").value = item.brand;
+    document.getElementById("name").value = item.name;
+    document.getElementById("price").value = item.price;
+    document.getElementById("rate").value = item.rate;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function saveItem() {
+    const item = {
+      id: editingId || Date.now(),
+      brand: document.getElementById("brand").value,
+      name: document.getElementById("name").value,
+      price: document.getElementById("price").value,
+      rate: document.getElementById("rate").value
+    };
+
+    Shared.saveItem(item);
+    editingId = null;
+    render();
+    newItem();
+  }
+
   render();
-}
-
-function edit(i) {
-  const item = load()[i];
-  editIndex = i;
-  brand.value = item.brand;
-  name.value = item.name;
-  price.value = item.price;
-  rate.value = item.rate;
-}
-
-function newItem() {
-  clearForm();
-}
-
-function clearForm() {
-  brand.value = "";
-  name.value = "";
-  price.value = "";
-  rate.value = "";
-  editIndex = null;
-}
-
-render();
 </script>
+
 </body>
 </html>
